@@ -1,0 +1,6 @@
+{
+    "key": "TWITTER_KEY",
+    "secret": "TWITTER_SECRET",
+    "token": "TWITTER_TOKEN",
+    "tokenSecret": "TOKEN_SECRET"
+}
