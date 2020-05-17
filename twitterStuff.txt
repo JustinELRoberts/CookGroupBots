@@ -1,6 +1,6 @@
 {
-    "key": "TWITTER_KEY",
-    "secret": "TWITTER_SECRET",
-    "token": "TWITTER_TOKEN",
-    "tokenSecret": "TOKEN_SECRET"
+    "key": "9OEtBVCUB9blTGpDdsuzp5bCO",
+    "secret": "22nh49kr6hFI4MlgWgjpDRd5Cz3pXnT57TI5XQmPUhcd4TUsS7",
+    "token": "1225071943466082307-EYp3h7luW3FMxnyxO8y8vW84zclkQN",
+    "tokenSecret": "SdN94yNwICj38I9b2Ve6lEMaHsSB8ZVCwjhv28h3fnanL"
 }
