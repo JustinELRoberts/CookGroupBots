@@ -2,6 +2,11 @@ import discord
 import twitter
 import json
 import re
+import os
+
+# Points gained per success posted
+successPoints = 10
+points = {}
 
 # ID of the discord bot
 # (can be found by posting something with the bot and checking ctx.author.id)
@@ -13,8 +18,8 @@ DISCORD_BOT_ID = 650713254322241559
 DISCORD_CHANNEL_ID = 710479705798869143
 
 # Color used for embeds
-discordHex = 0xfbde67
 successHex = 0x00ff00
+yellowHex = 0xfbde67
 failureHex = 0xff0000
 
 # The prefix used in bot commands (e.g. !help)
@@ -90,6 +95,45 @@ def delete_tweet(tweet_url):
     api.DestroyStatus(tweet_id)
 
 
+# ------------------------ Point Management Funcs --------------------------- #
+# Function to load the current point dict
+def loadPoints():
+
+    # Return an empty dict if we havent stored anything yet
+    if not os.path.exists("./points.json"):
+        return {}
+
+    # If we have, load it and return the result
+    with open("./points.json", 'r') as f:
+        loadedPoints = json.load(f)
+        f.close()
+    return loadedPoints
+
+
+# Function to save the current point dict
+def savePoints():
+    with open("./points.json", 'w+') as f:
+        json.dump(points, f)
+        f.close
+
+
+# Function to add points to the user who's discordID is `id`
+# By default, adds `successPoints` points
+def addPoints(id, amount=successPoints):
+    id = str(id)
+    if id not in points.keys():
+        points[id] = amount
+    else:
+        points[id] += amount
+    savePoints()
+
+
+# Funtion which returns the number of points for a given user
+def getPoints(id):
+    id = str(id)
+    return points[id]
+
+
 # ---------------------------- on_message Event ----------------------------- #
 mediaExt = ['.jpg', '.png', '.jpeg', '.mp4']
 @client.event
@@ -110,6 +154,7 @@ async def on_message(message):
     for attachment in message.attachments:
         isAttached = True
         tweetURL = post_tweet(attachment.url, message.author)
+        addPoints(message.author.id)
         fields.append({"name": "Your Post", "value": f"[Here]({msgLink})"})
         fields.append({"name": "Tweet", "value": f"[Here]({tweetURL})"})
 
@@ -118,12 +163,14 @@ async def on_message(message):
         if message.content.endswith(ext):
             isAttached = True
             tweetURL = post_tweet(message. content, message.author)
+            addPoints(message.author.id)
             fields.append({"name": "Your Post", "value": f"[Here]({msgLink})"})
             fields.append({"name": "Tweet", "value": f"[Here]({tweetURL})"})
 
     if isAttached:
         await send_embed(message.channel, "Success!",
-                         "Your success has been post to Twitter.\n" +
+                         "Your success has been post to Twitter. " +
+                         f"You have {getPoints(message.author.id)} points.\n" +
                          "Please react with ❌ if you'd like to " +
                          "remove the post", successHex, fields)
         await message.add_reaction('❌')
@@ -137,7 +184,8 @@ async def on_message(message):
 async def on_raw_reaction_add(rawReactionActionEvent):
 
     # Get the channel and message this react occured in
-    user = client.get_user(rawReactionActionEvent.user_id)
+    authorID = rawReactionActionEvent.user_id
+    user = client.get_user(authorID)
     channel = client.get_channel(rawReactionActionEvent.channel_id)
     message = await channel.fetch_message(rawReactionActionEvent.message_id)
 
@@ -169,11 +217,19 @@ async def on_raw_reaction_add(rawReactionActionEvent):
             delete_tweet(tweet_url)
             await post.delete()
             await message.delete()
+            addPoints(authorID, -successPoints)
+            await send_embed(message.channel, f"{message.author}",
+                             "Your success has been deleted from Twitter.\n" +
+                             f"You have {getPoints(message.author.id)} points.\n",
+                             yellowHex)
 
 
 # -------------------------------- Enter Here ------------------------------- #
 # Start the bot
 if __name__ == "__main__":
+    # Load points
+    points = loadPoints()
+
     # Load twitter stuff
     twitterStuffString = open("./twitterStuff.txt").read()
     twitterStuff = json.loads(twitterStuffString)
