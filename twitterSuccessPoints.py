@@ -2,6 +2,7 @@ from discord.ext import commands
 import discord
 import twitter
 import json
+import math
 import re
 import os
 
@@ -11,29 +12,28 @@ successPoints = 10
 itemsPerPage = 5
 groupName = "Justin Notify"
 
-# ID of the discord bot
-# (can be found by posting something with the bot and checking ctx.author.id)
+# Discord server settings
 DISCORD_BOT_ID = 650713254322241559
-
-# ID of the Discord channel whose messages you want to post to twitter
 DISCORD_SUCCESS_CHANNEL_ID = 710479705798869143
-
-# List of Discord channel IDs where we want the bot to recieve commands
 DISCORD_COMMANDS_CHANNELS = [711960475340111943]
 
-# Color used for embeds
+# Colors used for embeds
 greenHex = 0x00ff00
 yellowHex = 0xfbde67
 redHex = 0xff0000
 shopHex = 0x00ff00
 
-# For Discord stuff
+# Initialize Bot object (inherits from Client)
 bot = commands.Bot(command_prefix='!')
 bot.remove_command('help')
 
 # Regex matching patterns
 hyperlink_url_pattern = re.compile(r"\((.+)\)")
 tweet_id_pattern = re.compile(r"/status/(\d+)")
+
+# Used for adding reactions for shop page navigation
+numberEmojis = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣',
+                '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟']
 
 
 # --------------------------------------------------------------------------- #
@@ -46,7 +46,7 @@ async def send_embed(ctx, title, description, color, fields=None):
         for field in fields:
             embed.add_field(name=field["name"], value=field["value"],
                             inline=field["inline"])
-    await ctx.send(embed=embed)
+    return await ctx.send(embed=embed)
 
 
 # Get the linked jump url from the embed's added field
@@ -140,6 +140,11 @@ async def respondToSuccess(message):
     else:
         await send_embed(message.channel, "Error", "Please make sure you " +
                          "include an image or video in your post.", redHex)
+
+
+# Function to edit a shop post to change pages
+def shopNavigation(rawReactionActionEvent):
+    pass
 
 
 # --------------------------------------------------------------------------- #
@@ -254,6 +259,7 @@ async def on_message(message):
 @bot.event
 async def on_raw_reaction_add(rawReactionActionEvent):
     await deleteSuccess(rawReactionActionEvent)
+    await shopNavigation(rawReactionActionEvent)
 
 
 # --------------------------------------------------------------------------- #
@@ -288,9 +294,14 @@ async def shop(ctx):
         fields.append({"name": f"**{name}**",
                        "value": f"Cost: {points} points\nStock: {stock}",
                        "inline": False})
- 
-    await send_embed(ctx, "", f"🎁 **{groupName} Shop Page 1** 🎁",
-                     shopHex, fields)
+
+    message = await send_embed(ctx, "", f"🎁 **{groupName} Shop Page 1** 🎁",
+                               shopHex, fields)
+
+    # Add reactions for page navigation
+    numPages = math.ceil(len(shop.keys()) / itemsPerPage)
+    for num in range(numPages):
+        await message.add_reaction(numberEmojis[num])
 
 # -------------------------------- Enter Here ------------------------------- #
 # Start the bot
