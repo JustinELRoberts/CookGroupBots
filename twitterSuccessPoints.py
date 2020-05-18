@@ -220,7 +220,7 @@ async def on_raw_reaction_add(rawReactionActionEvent):
             addPoints(authorID, -successPoints)
             await send_embed(message.channel, f"{message.author}",
                              "Your success has been deleted from Twitter.\n" +
-                             f"You have {getPoints(message.author.id)} points.\n",
+                             f"You have {getPoints(authorID)} points.\n",
                              yellowHex)
 
 
