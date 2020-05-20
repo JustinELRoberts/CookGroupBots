@@ -14,8 +14,8 @@ groupName = "Justin Notify"
 
 # Discord server settings
 DISCORD_BOT_ID = 650713254322241559
-DISCORD_SUCCESS_CHANNEL_ID = 710479705798869143
-DISCORD_COMMANDS_CHANNELS = [711960475340111943]
+DISCORD_SUCCESS_CHANNEL_ID = 712657003109023766
+DISCORD_SHOP_CHANNELS = [711960475340111943]
 
 # Colors used for embeds
 greenHex = 0x00ff00
@@ -58,21 +58,44 @@ def get_linked_jump_url(embed):
     return None
 
 
+# Generate and return the fields for a certain page for the shop
+def generatePageFields(page):
+    fields = []
+    indices = [(page - 1) * itemsPerPage, page * itemsPerPage]
+    items = list(shop.items())[indices[0]:indices[1]]
+    for item in sorted(items, key=lambda item: item[1]["Points"]):
+        name = item[0]
+        points = item[1]["Points"]
+        stock = item[1]["Stock"]
+        fields.append({"name": f"**{name}**",
+                       "value": f"Cost: {points} points\nStock: {stock}",
+                       "inline": False})
+    return fields
+
+
+# Helper function to unpack a rawReactionActionEvent
+# Returns a dict containing useful information about the reaction
+async def unpackRawReactionActionEvent(reactionEvent):
+    authorID = reactionEvent.user_id
+    user = bot.get_user(authorID)
+    channel = bot.get_channel(reactionEvent.channel_id)
+    message = await channel.fetch_message(reactionEvent.message_id)
+    return (authorID, user, channel, message)
+
+
 # Function used to add functionality for post deletion when reating
 # to a post
 async def deleteSuccess(rawReactionActionEvent):
 
-    # Get the channel and message this react occured in
-    authorID = rawReactionActionEvent.user_id
-    user = bot.get_user(authorID)
-    channel = bot.get_channel(rawReactionActionEvent.channel_id)
-    message = await channel.fetch_message(rawReactionActionEvent.message_id)
+    # Unpack the rawReactionActionEvent
+    e = rawReactionActionEvent
+    authorID, user, channel, message = await unpackRawReactionActionEvent(e)
 
     # If this is not sent from the proper channel, stop here
     if channel.id != DISCORD_SUCCESS_CHANNEL_ID:
         return
 
-    # If the reaction was sent by us, return
+    # If the reaction was sent by us, stop here
     if user.id == DISCORD_BOT_ID:
         return
 
@@ -101,6 +124,50 @@ async def deleteSuccess(rawReactionActionEvent):
                              "Your success has been deleted from Twitter.\n" +
                              f"You have {getPoints(authorID)} points.\n",
                              redHex)
+
+
+# Function to edit a shop post to change pages
+async def shopNavigation(rawReactionActionEvent):
+
+    # Unpack the rawReactionActionEvent
+    e = rawReactionActionEvent
+    authorID, user, channel, message = await unpackRawReactionActionEvent(e)
+    author = bot.get_user(authorID)
+    emoji = rawReactionActionEvent.emoji
+
+    # If this is not sent from the proper channel, stop here
+    if channel.id not in DISCORD_SHOP_CHANNELS:
+        return
+
+    # If the reaction was sent by us, stop here
+    if user.id == DISCORD_BOT_ID:
+        return
+
+    # If the message itself is not one of the shop messages, stop here
+    if len(message.embeds) != 1:
+        return
+    embed = message.embeds[0]
+    if f"**{groupName} Shop Page" not in embed.description:
+        return
+
+    # If the reaction isnt a number emoji, remove it and stop here
+    if emoji.name not in numberEmojis:
+        await message.remove_reaction(emoji, author)
+        return
+
+    # If we get to this point, we need change shop pages
+    pageNum = numberEmojis.index(emoji.name) + 1
+    fields = generatePageFields(page=pageNum)
+    embed = discord.Embed(title="",
+                          description=f"🎁 **{groupName} Shop Page 1** 🎁",
+                          color=shopHex)
+    for field in fields:
+        embed.add_field(name=field["name"], value=field["value"],
+                        inline=field["inline"])
+    await message.edit(embed=embed)
+
+    # Remove the reaction
+    await message.remove_reaction(emoji, author)
 
 
 # Function to respond to success posts
@@ -140,11 +207,6 @@ async def respondToSuccess(message):
     else:
         await send_embed(message.channel, "Error", "Please make sure you " +
                          "include an image or video in your post.", redHex)
-
-
-# Function to edit a shop post to change pages
-def shopNavigation(rawReactionActionEvent):
-    pass
 
 
 # --------------------------------------------------------------------------- #
@@ -258,6 +320,7 @@ async def on_message(message):
 # -------------------------  on_reaction_add Event -------------------------- #
 @bot.event
 async def on_raw_reaction_add(rawReactionActionEvent):
+
     await deleteSuccess(rawReactionActionEvent)
     await shopNavigation(rawReactionActionEvent)
 
@@ -271,7 +334,7 @@ async def on_raw_reaction_add(rawReactionActionEvent):
 async def shop(ctx):
 
     # If this isn't one of the channels where we take commands, stop here
-    if ctx.channel.id not in DISCORD_COMMANDS_CHANNELS:
+    if ctx.channel.id not in DISCORD_SHOP_CHANNELS:
         return
 
     # If the shop is empty, alert the user
@@ -282,19 +345,7 @@ async def shop(ctx):
         return
 
     # Otherwise display the shop's first page, containing `itemsPerPage` items
-    fields = []
-    for num, item in enumerate(sorted(shop.items(),
-                                      key=lambda item: item[1]["Points"])):
-        if num >= itemsPerPage:
-            break
-
-        name = item[0]
-        points = item[1]["Points"]
-        stock = item[1]["Stock"]
-        fields.append({"name": f"**{name}**",
-                       "value": f"Cost: {points} points\nStock: {stock}",
-                       "inline": False})
-
+    fields = generatePageFields(page=1)
     message = await send_embed(ctx, "", f"🎁 **{groupName} Shop Page 1** 🎁",
                                shopHex, fields)
 
