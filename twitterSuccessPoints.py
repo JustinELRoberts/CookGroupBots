@@ -7,15 +7,16 @@ import re
 import os
 
 
-# UI settings for a particular group
-successPoints = 10
-itemsPerPage = 5
-groupName = "Justin Notify"
-
 # Discord server settings
 DISCORD_BOT_ID = 650713254322241559
 DISCORD_SUCCESS_CHANNEL_ID = 712657003109023766
 DISCORD_SHOP_CHANNELS = [711960475340111943]
+DISCORD_ADMINS = [553221161450733569]
+
+# UI settings
+successPoints = 10
+itemsPerPage = 5
+groupName = "Justin Notify"
 
 # Colors used for embeds
 greenHex = 0x00ff00
@@ -326,7 +327,7 @@ async def on_raw_reaction_add(rawReactionActionEvent):
 
 
 # --------------------------------------------------------------------------- #
-# -------------------------------- Commands --------------------------------- #
+# ------------------------------ User Commands ------------------------------ #
 # --------------------------------------------------------------------------- #
 # ------------------------------ Shop Command ------------------------------- #
 @bot.command(name='shop')
@@ -353,6 +354,69 @@ async def shop(ctx):
     numPages = math.ceil(len(shop.keys()) / itemsPerPage)
     for num in range(numPages):
         await message.add_reaction(numberEmojis[num])
+
+
+# --------------------------------------------------------------------------- #
+# ------------------------------ Admin Commands ----------------------------- #
+# --------------------------------------------------------------------------- #
+async def isValidCall(ctx, commandInfo, args, extraArgs):
+
+    # Usage string
+    usage = "Usage:"
+    for command in commandInfo["args"]:
+        usage += f" <{command}>"
+
+    # If we are not in a DM, stop here
+    if (not isinstance(ctx.channel, discord.DMChannel)):
+        return False
+
+    # If an admin did not send this message, stop here
+    if ctx.author.id not in DISCORD_ADMINS:
+        return False
+
+    # Make sure all args were passed
+    if None in args:
+        description = "You are missing one or more arguments.\n"
+        description += usage
+        await send_embed(ctx.channel, "Error", description, redHex)
+        return False
+
+    # Make sure not too many args are passed
+    if len(extraArgs) > 0:
+        description = "You sent too many arguments.\n"
+        description += usage
+        await send_embed(ctx.channel, "Error", description, redHex)
+        return False
+
+    # Check that every passed argument is the proper type
+    try:
+        for argName, argVal in zip(commandInfo["args"], args):
+            commandInfo["args"][argName](argVal)
+    except ValueError:
+        await send_embed(ctx.channel, "Error",
+                         "One or more argument(s) are of the wrong type.\n" +
+                         "Usage: `!add <productName> <cost> <stock>`\n" +
+                         "where <productName> is a string, <cost> is an" +
+                         "integer, and <stock> is an integer.", redHex)
+        return False
+
+    # If we get to this point, the command is valid
+    return True
+
+
+# ---------------------------- Add product stock  --------------------------- #
+@bot.command(name='add')
+@commands.cooldown(1, 0.5, commands.BucketType.user)
+async def add(ctx, productName=None, cost=None, stock=None, *args):
+
+    # If this isn't a valid call of this function, stop here
+    commandInfo = {"name": "add",
+                   "args": {"productName": str, "cost": int, "stock": int}}
+    isValid = await isValidCall(ctx, commandInfo,
+                                [productName, cost, stock], args)
+    if not isValid:
+        return
+
 
 # -------------------------------- Enter Here ------------------------------- #
 # Start the bot
