@@ -362,9 +362,10 @@ async def shop(ctx):
 async def isValidCall(ctx, commandInfo, args, extraArgs):
 
     # Usage string
-    usage = "Usage:"
+    usage = f"Usage: `!{commandInfo['name']}"
     for command in commandInfo["args"]:
         usage += f" <{command}>"
+    usage += "`"
 
     # If we are not in a DM, stop here
     if (not isinstance(ctx.channel, discord.DMChannel)):
@@ -393,29 +394,94 @@ async def isValidCall(ctx, commandInfo, args, extraArgs):
         for argName, argVal in zip(commandInfo["args"], args):
             commandInfo["args"][argName](argVal)
     except ValueError:
-        await send_embed(ctx.channel, "Error",
-                         "One or more argument(s) are of the wrong type.\n" +
-                         "Usage: `!add <productName> <cost> <stock>`\n" +
-                         "where <productName> is a string, <cost> is an" +
-                         "integer, and <stock> is an integer.", redHex)
+        errorMsg = "One or more argument(s) are of the wrong type.\n"
+        errorMsg += usage + "\n"
+        errorMsg += "where"
+        numCommands = len(commandInfo["args"])
+        for num, command in enumerate(commandInfo["args"]):
+            commandType = commandInfo['args'][command].__name__
+            errorMsg += f" `<{command}>` is a `{commandType}`"
+            if numCommands > 2:
+                errorMsg += ","
+            if num == numCommands - 2:
+                errorMsg += " and"
+
+        await send_embed(ctx.channel, "Error", errorMsg, redHex)
         return False
 
     # If we get to this point, the command is valid
     return True
 
 
-# ---------------------------- Add product stock  --------------------------- #
-@bot.command(name='add')
+# -------------------------- Add a new product  ----------------------------- #
+@bot.command(name='addproduct')
 @commands.cooldown(1, 0.5, commands.BucketType.user)
-async def add(ctx, productName=None, cost=None, stock=None, *args):
+async def addproduct(ctx, productName=None, cost=None, stock=None, *args):
 
-    # If this isn't a valid call of this function, stop here
-    commandInfo = {"name": "add",
+    # If this isn't a valid call of this admin command, stop here
+    commandInfo = {"name": "addproduct",
                    "args": {"productName": str, "cost": int, "stock": int}}
     isValid = await isValidCall(ctx, commandInfo,
                                 [productName, cost, stock], args)
     if not isValid:
         return
+
+
+# ------------------- Add stock to an existing product  --------------------- #
+@bot.command(name='addstock')
+@commands.cooldown(1, 0.5, commands.BucketType.user)
+async def addstock(ctx, productName=None, stock=None, *args):
+
+    # If this isn't a valid call of this admin command, stop here
+    commandInfo = {"name": "addstock",
+                   "args": {"productName": str, "stock": int}}
+    isValid = await isValidCall(ctx, commandInfo,
+                                [productName, stock], args)
+    if not isValid:
+        return
+
+    # If the product is not in the shop, return an error
+    if productName not in shop:
+        await send_embed(ctx, "Error",
+                         f"**{productName}** is not currently in the shop.",
+                         redHex)
+        return
+    # Otherwise add the product's stock to the shop.
+    else:
+        shop[productName]["Stock"] += int(stock)
+    saveData("shop", shop)
+
+    # Return a success message
+    await send_embed(ctx, "Success", f"**{productName}** now has a stock of " +
+                     f"**{shop[productName]['Stock']}**", greenHex)
+
+
+# ----------------------------- Delete a product  --------------------------- #
+@bot.command(name='delete')
+@commands.cooldown(1, 0.5, commands.BucketType.user)
+async def delete(ctx, productName=None, *args):
+
+    # If this isn't a valid call of this admin command, stop here
+    commandInfo = {"name": "delete",
+                   "args": {"productName": str}}
+    isValid = await isValidCall(ctx, commandInfo,
+                                [productName], args)
+    if not isValid:
+        return
+
+    # If the product is not in the shop, return an error
+    if productName not in shop:
+        await send_embed(ctx, "Error",
+                         f"**{productName}** is not currently in the shop.",
+                         redHex)
+        return
+
+    # Otherwise delete it and return a success message
+    del shop[productName]
+    saveData("shop", shop)
+    await send_embed(ctx, "Success",
+                     f"**{productName}** has been removed from the shop.",
+                     greenHex)
 
 
 # -------------------------------- Enter Here ------------------------------- #
