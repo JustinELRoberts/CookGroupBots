@@ -29,8 +29,8 @@ bot = commands.Bot(command_prefix='!')
 bot.remove_command('help')
 
 # Regex matching patterns
-hyperlink_url_pattern = re.compile(r"\((.+)\)")
-tweet_id_pattern = re.compile(r"/status/(\d+)")
+hyperlinkUrlPattern = re.compile(r"\((.+)\)")
+tweetIdPattern = re.compile(r"/status/(\d+)")
 
 # Used for adding reactions for shop page navigation
 numberEmojis = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣',
@@ -54,8 +54,8 @@ async def send_embed(ctx, title, description, color, fields=None):
 def get_linked_jump_url(embed):
     for field in embed.fields:
         if field.name == "Your Post":
-            jump_url = hyperlink_url_pattern.search(field.value).group(1)
-            return jump_url
+            jumpURL = hyperlinkUrlPattern.search(field.value).group(1)
+            return jumpURL
     return None
 
 
@@ -217,7 +217,7 @@ async def respondToSuccess(message):
 def get_tweet_url(embed):
     for field in embed.fields:
         if field.name == "Tweet":
-            tweet_url = hyperlink_url_pattern.search(field.value).group(1)
+            tweet_url = hyperlinkUrlPattern.search(field.value).group(1)
             return tweet_url
     return None
 
@@ -249,10 +249,10 @@ def delete_tweet(tweet_url):
                       sleep_on_rate_limit=True)
 
     # Get the tweet's id
-    tweet_id = tweet_id_pattern.search(tweet_url).group(1)
+    tweetID = tweetIdPattern.search(tweet_url).group(1)
 
     # Delete the post
-    api.DestroyStatus(tweet_id)
+    api.DestroyStatus(tweetID)
 
 
 # --------------------------------------------------------------------------- #
@@ -359,6 +359,7 @@ async def shop(ctx):
 # --------------------------------------------------------------------------- #
 # ------------------------------ Admin Commands ----------------------------- #
 # --------------------------------------------------------------------------- #
+# -------- Helper function to validate the call of an admin command ----------#
 async def isValidCall(ctx, commandInfo, args, extraArgs):
 
     # Usage string
@@ -367,12 +368,19 @@ async def isValidCall(ctx, commandInfo, args, extraArgs):
         usage += f" <{command}>"
     usage += "`"
 
-    # If we are not in a DM, stop here
-    if (not isinstance(ctx.channel, discord.DMChannel)):
-        return False
+    # # If we are not in a DM and need to be, stop here
+    # if hasToBeDM and not isinstance(ctx.channel, discord.DMChannel):
+    #     return False
 
-    # If an admin did not send this message, stop here
+    # If we aren't in one of the shop channels, stop here
+    if ctx.channel.id not in DISCORD_SHOP_CHANNELS:
+        return
+
+    # If an admin did not send this message, return an error
     if ctx.author.id not in DISCORD_ADMINS:
+        await send_embed(ctx, "Error",
+                         "You do not have permission to use this command",
+                         redHex)
         return False
 
     # Make sure all args were passed
@@ -426,6 +434,22 @@ async def addproduct(ctx, productName=None, cost=None, stock=None, *args):
     if not isValid:
         return
 
+    # If the product is already in the store, return an error
+    if productName in shop:
+        await send_embed(ctx, "Error",
+                         f"**{productName}** is already in the shop",
+                         redHex)
+        return
+
+    # Otherwise add it the shop and return a success message
+    else:
+        shop[productName] = {"Points": cost, "Stock": stock}
+        saveData("shop", shop)
+        await send_embed(ctx, "Success!",
+                         f"**{productName}** has been added to the store " +
+                         f"with a price of **{cost}** and " +
+                         f"a stock of **{stock}**", greenHex)
+
 
 # ------------------- Add stock to an existing product  --------------------- #
 @bot.command(name='addstock')
@@ -448,12 +472,13 @@ async def addstock(ctx, productName=None, stock=None, *args):
         return
     # Otherwise add the product's stock to the shop.
     else:
-        shop[productName]["Stock"] += int(stock)
+        shop[productName]["Stock"] = int(shop[productName]["Stock"]) + \
+                                     int(stock)
     saveData("shop", shop)
 
     # Return a success message
-    await send_embed(ctx, "Success", f"**{productName}** now has a stock of " +
-                     f"**{shop[productName]['Stock']}**", greenHex)
+    await send_embed(ctx, "Success!", f"**{productName}** now has a stock " +
+                     f"of **{shop[productName]['Stock']}**", greenHex)
 
 
 # ----------------------------- Delete a product  --------------------------- #
@@ -479,13 +504,52 @@ async def delete(ctx, productName=None, *args):
     # Otherwise delete it and return a success message
     del shop[productName]
     saveData("shop", shop)
-    await send_embed(ctx, "Success",
+    await send_embed(ctx, "Success!",
                      f"**{productName}** has been removed from the shop.",
                      greenHex)
 
 
+# -------------------------- Give a user points  ---------------------------- #
+userMentionPattern = re.compile(r"<@!(\d+)>")
+@bot.command(name='givepoints')
+async def givepoints(ctx, user=None, amount=None, *args):
+
+    # If this isn't a valid call of this admin command, stop here
+    commandInfo = {"name": "givepoints",
+                   "args": {"user": str, "amount": int}}
+    isValid = await isValidCall(ctx, commandInfo,
+                                [user, amount], args)
+    if not isValid:
+        return
+
+    # If the regular expression above can't find the user, return an error
+    userSearchResult = userMentionPattern.search(user)
+    if userSearchResult is None:
+        await send_embed(ctx, "Error", "User not found.", redHex)
+        return
+
+    # If we can't find the user given their ID, return an error
+    user = bot.get_user(int(userSearchResult.group(1)))
+    if userSearchResult is None:
+        await send_embed(ctx, "Error", "User not found.", redHex)
+        return
+
+    # If we get to this point, add the points to the user
+    # and return a success message
+    userIDStr = str(user.id)
+    if userIDStr in points:
+        points[userIDStr] += int(amount)
+    else:
+        points[userIDStr] = int(amount)
+    await send_embed(ctx, "Success!",
+                     f"{user.name} now has {points[userIDStr]} points.",
+                     greenHex)
+    saveData("points", points)
+
+
+# --------------------------------------------------------------------------- #
 # -------------------------------- Enter Here ------------------------------- #
-# Start the bot
+# --------------------------------------------------------------------------- #
 if __name__ == "__main__":
 
     # Load the stored points and shop
