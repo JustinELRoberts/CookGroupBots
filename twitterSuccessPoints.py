@@ -38,6 +38,9 @@ numberEmojis = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣',
 
 
 # --------------------------------------------------------------------------- #
+# ------------------------------ Helper Funcs ------------------------------- #
+# --------------------------------------------------------------------------- #
+# --------------------------------------------------------------------------- #
 # ----------------------------- Discord Funcs ------------------------------- #
 # --------------------------------------------------------------------------- #
 # Function to send a basic embed
@@ -82,132 +85,6 @@ async def unpackRawReactionActionEvent(reactionEvent):
     channel = bot.get_channel(reactionEvent.channel_id)
     message = await channel.fetch_message(reactionEvent.message_id)
     return (authorID, user, channel, message)
-
-
-# Function used to add functionality for post deletion when reating
-# to a post
-async def deleteSuccess(rawReactionActionEvent):
-
-    # Unpack the rawReactionActionEvent
-    e = rawReactionActionEvent
-    authorID, user, channel, message = await unpackRawReactionActionEvent(e)
-
-    # If this is not sent from the proper channel, stop here
-    if channel.id != DISCORD_SUCCESS_CHANNEL_ID:
-        return
-
-    # If the reaction was sent by us, stop here
-    if user.id == DISCORD_BOT_ID:
-        return
-
-    # If the reaction isnt ❌, stop here
-    if rawReactionActionEvent.emoji.name != '❌':
-        return
-
-    # If the reaction is not sent by the message author, delete it
-    for reaction in message.reactions:
-        if user.id != message.author.id:
-            await reaction.remove(user)
-            return
-
-    # If we get to this point, we need to delete all associated posts
-    # First we need to get the post we made in response to the OP
-    async for post in message.channel.history(after=message.created_at):
-        jump_url = get_linked_jump_url(post.embeds[0])
-        # Once we find the message, delete the tweet, user post, and bot post
-        if jump_url == message.jump_url:
-            tweet_url = get_tweet_url(post.embeds[0])
-            delete_tweet(tweet_url)
-            await post.delete()
-            await message.delete()
-            addPoints(authorID, -successPoints)
-            await send_embed(message.channel, f"{message.author}",
-                             "Your success has been deleted from Twitter.\n" +
-                             f"You have {getPoints(authorID)} points.\n",
-                             redHex)
-
-
-# Function to edit a shop post to change pages
-async def shopNavigation(rawReactionActionEvent):
-
-    # Unpack the rawReactionActionEvent
-    e = rawReactionActionEvent
-    authorID, user, channel, message = await unpackRawReactionActionEvent(e)
-    author = bot.get_user(authorID)
-    emoji = rawReactionActionEvent.emoji
-
-    # If this is not sent from the proper channel, stop here
-    if channel.id not in DISCORD_SHOP_CHANNELS:
-        return
-
-    # If the reaction was sent by us, stop here
-    if user.id == DISCORD_BOT_ID:
-        return
-
-    # If the message itself is not one of the shop messages, stop here
-    if len(message.embeds) != 1:
-        return
-    embed = message.embeds[0]
-    if f"**{groupName} Shop Page" not in embed.description:
-        return
-
-    # If the reaction isnt a number emoji, remove it and stop here
-    if emoji.name not in numberEmojis:
-        await message.remove_reaction(emoji, author)
-        return
-
-    # If we get to this point, we need change shop pages
-    pageNum = numberEmojis.index(emoji.name) + 1
-    fields = generatePageFields(page=pageNum)
-    embed = discord.Embed(title="",
-                          description=f"🎁 **{groupName} Shop Page 1** 🎁",
-                          color=shopHex)
-    for field in fields:
-        embed.add_field(name=field["name"], value=field["value"],
-                        inline=field["inline"])
-    await message.edit(embed=embed)
-
-    # Remove the reaction
-    await message.remove_reaction(emoji, author)
-
-
-# Function to respond to success posts
-async def respondToSuccess(message):
-
-    # Otherwise iterate through all the images sent and post them to twitter
-    msgLink = message.jump_url
-    isAttached = False
-    fields = []
-    for attachment in message.attachments:
-        isAttached = True
-        tweetURL = post_tweet(attachment.url, message.author)
-        addPoints(message.author.id)
-        fields.append({"name": "Your Post", "value": f"[Here]({msgLink})",
-                      "inline": True})
-        fields.append({"name": "Tweet", "value": f"[Here]({tweetURL})",
-                      "inline": True})
-
-    # If the message sent was an image link, post it to twitter
-    for ext in mediaExt:
-        if message.content.endswith(ext):
-            isAttached = True
-            tweetURL = post_tweet(message. content, message.author)
-            addPoints(message.author.id)
-            fields.append({"name": "Your Post", "value": f"[Here]({msgLink})",
-                          "inline": True})
-            fields.append({"name": "Tweet", "value": f"[Here]({tweetURL})",
-                          "inline": True})
-
-    if isAttached:
-        await send_embed(message.channel, "Success!",
-                         "Your success has been post to Twitter. " +
-                         f"You have {getPoints(message.author.id)} points.\n" +
-                         "Please react with ❌ if you'd like to " +
-                         "remove the post", greenHex, fields)
-        await message.add_reaction('❌')
-    else:
-        await send_embed(message.channel, "Error", "Please make sure you " +
-                         "include an image or video in your post.", redHex)
 
 
 # --------------------------------------------------------------------------- #
@@ -301,7 +178,48 @@ def getPoints(id):
 # --------------------------------------------------------------------------- #
 # --------------------------------- Events ---------------------------------- #
 # --------------------------------------------------------------------------- #
+# --------------------------------------------------------------------------- #
 # ---------------------------- on_message Event ----------------------------- #
+# --------------------------------------------------------------------------- #
+# Function to respond to success posts
+async def respondToSuccess(message):
+
+    # Otherwise iterate through all the images sent and post them to twitter
+    msgLink = message.jump_url
+    isAttached = False
+    fields = []
+    for attachment in message.attachments:
+        isAttached = True
+        tweetURL = post_tweet(attachment.url, message.author)
+        addPoints(message.author.id)
+        fields.append({"name": "Your Post", "value": f"[Here]({msgLink})",
+                      "inline": True})
+        fields.append({"name": "Tweet", "value": f"[Here]({tweetURL})",
+                      "inline": True})
+
+    # If the message sent was an image link, post it to twitter
+    for ext in mediaExt:
+        if message.content.endswith(ext):
+            isAttached = True
+            tweetURL = post_tweet(message. content, message.author)
+            addPoints(message.author.id)
+            fields.append({"name": "Your Post", "value": f"[Here]({msgLink})",
+                          "inline": True})
+            fields.append({"name": "Tweet", "value": f"[Here]({tweetURL})",
+                          "inline": True})
+
+    if isAttached:
+        await send_embed(message.channel, "Success!",
+                         "Your success has been post to Twitter. " +
+                         f"You have {getPoints(message.author.id)} points.\n" +
+                         "Please react with ❌ if you'd like to " +
+                         "remove the post", greenHex, fields)
+        await message.add_reaction('❌')
+    else:
+        await send_embed(message.channel, "Error", "Please make sure you " +
+                         "include an image or video in your post.", redHex)
+
+
 mediaExt = ['.jpg', '.png', '.jpeg', '.mp4']
 @bot.event
 async def on_message(message):
@@ -318,7 +236,96 @@ async def on_message(message):
     await bot.process_commands(message)
 
 
+# --------------------------------------------------------------------------- #
 # -------------------------  on_reaction_add Event -------------------------- #
+# --------------------------------------------------------------------------- #
+# Function used to add functionality for post deletion when reacting
+# to a post
+async def deleteSuccess(rawReactionActionEvent):
+
+    # Unpack the rawReactionActionEvent
+    e = rawReactionActionEvent
+    authorID, user, channel, message = await unpackRawReactionActionEvent(e)
+
+    # If this is not sent from the proper channel, stop here
+    if channel.id != DISCORD_SUCCESS_CHANNEL_ID:
+        return
+
+    # If the reaction was sent by us, stop here
+    if user.id == DISCORD_BOT_ID:
+        return
+
+    # If the reaction isnt ❌, stop here
+    if rawReactionActionEvent.emoji.name != '❌':
+        return
+
+    # If the reaction is not sent by the message author, delete it
+    for reaction in message.reactions:
+        if user.id != message.author.id:
+            await reaction.remove(user)
+            return
+
+    # If we get to this point, we need to delete all associated posts
+    # First we need to get the post we made in response to the OP
+    async for post in message.channel.history(after=message.created_at):
+        jump_url = get_linked_jump_url(post.embeds[0])
+        # Once we find the message, delete the tweet, user post, and bot post
+        if jump_url == message.jump_url:
+            tweet_url = get_tweet_url(post.embeds[0])
+            delete_tweet(tweet_url)
+            await post.delete()
+            await message.delete()
+            addPoints(authorID, -successPoints)
+            await send_embed(message.channel, f"{message.author}",
+                             "Your success has been deleted from Twitter.\n" +
+                             f"You have {getPoints(authorID)} points.\n",
+                             redHex)
+
+
+# Function to edit a shop post to change pages
+async def shopNavigation(rawReactionActionEvent):
+
+    # Unpack the rawReactionActionEvent
+    e = rawReactionActionEvent
+    authorID, user, channel, message = await unpackRawReactionActionEvent(e)
+    author = bot.get_user(authorID)
+    emoji = rawReactionActionEvent.emoji
+
+    # If this is not sent from the proper channel, stop here
+    if channel.id not in DISCORD_SHOP_CHANNELS:
+        return
+
+    # If the reaction was sent by us, stop here
+    if user.id == DISCORD_BOT_ID:
+        return
+
+    # If the message itself is not one of the shop messages, stop here
+    if len(message.embeds) != 1:
+        return
+    embed = message.embeds[0]
+    if f"**{groupName} Shop Page" not in embed.description:
+        return
+
+    # If the reaction isnt a number emoji, remove it and stop here
+    if emoji.name not in numberEmojis:
+        await message.remove_reaction(emoji, author)
+        return
+
+    # If we get to this point, we need change shop pages
+    pageNum = numberEmojis.index(emoji.name) + 1
+    fields = generatePageFields(page=pageNum)
+    embed = discord.Embed(title="",
+                          description=f"🎁 **{groupName} Shop Page 1** 🎁",
+                          color=shopHex)
+    for field in fields:
+        embed.add_field(name=field["name"], value=field["value"],
+                        inline=field["inline"])
+    await message.edit(embed=embed)
+
+    # Remove the reaction
+    await message.remove_reaction(emoji, author)
+
+
 @bot.event
 async def on_raw_reaction_add(rawReactionActionEvent):
 
@@ -329,38 +336,10 @@ async def on_raw_reaction_add(rawReactionActionEvent):
 # --------------------------------------------------------------------------- #
 # ------------------------------ User Commands ------------------------------ #
 # --------------------------------------------------------------------------- #
-# ------------------------------ Shop Command ------------------------------- #
-@bot.command(name='shop')
-@commands.cooldown(1, 0.5, commands.BucketType.user)
-async def shop(ctx):
-
-    # If this isn't one of the channels where we take commands, stop here
-    if ctx.channel.id not in DISCORD_SHOP_CHANNELS:
-        return
-
-    # If the shop is empty, alert the user
-    if len(shop) == 0:
-        await send_embed(ctx, "__Shop Page 1__",
-                         "The shop is empty 😔",
-                         shopHex)
-        return
-
-    # Otherwise display the shop's first page, containing `itemsPerPage` items
-    fields = generatePageFields(page=1)
-    message = await send_embed(ctx, "", f"🎁 **{groupName} Shop Page 1** 🎁",
-                               shopHex, fields)
-
-    # Add reactions for page navigation
-    numPages = math.ceil(len(shop.keys()) / itemsPerPage)
-    for num in range(numPages):
-        await message.add_reaction(numberEmojis[num])
-
-
 # --------------------------------------------------------------------------- #
-# ------------------------------ Admin Commands ----------------------------- #
+# ---------- Helper function to validate the call of a user command ----------#
 # --------------------------------------------------------------------------- #
-# -------- Helper function to validate the call of an admin command ----------#
-async def isValidCall(ctx, commandInfo, args, extraArgs):
+async def isValidCall(ctx, commandInfo, args, extraArgs, adminOnly=False):
 
     # Usage string
     usage = f"Usage: `!{commandInfo['name']}"
@@ -377,7 +356,7 @@ async def isValidCall(ctx, commandInfo, args, extraArgs):
         return
 
     # If an admin did not send this message, return an error
-    if ctx.author.id not in DISCORD_ADMINS:
+    if adminOnly is True and ctx.author.id not in DISCORD_ADMINS:
         await send_embed(ctx, "Error",
                          "You do not have permission to use this command",
                          redHex)
@@ -420,19 +399,124 @@ async def isValidCall(ctx, commandInfo, args, extraArgs):
     # If we get to this point, the command is valid
     return True
 
+# --------------------------------------------------------------------------- #
+# ------------------------------ Points Command ----------------------------- #
+# --------------------------------------------------------------------------- #
+@bot.command(name='points')
+async def points(ctx, user=None, *args):
 
-# -------------------------- Add a new product  ----------------------------- #
+    # If this isn't a valid call of this user command, stop here
+    commandInfo = {"name": "addproduct", "args": {}}
+    isValid = await isValidCall(ctx, commandInfo, [], args)
+    if not isValid:
+        return
+
+# --------------------------------------------------------------------------- #
+# ---------------------------- Purchase Command ----------------------------- #
+# --------------------------------------------------------------------------- #
+@bot.command(name='purchase')
+async def purchase(ctx, item=None, *args):
+
+    # If this isn't a valid call of this user command, stop here
+    commandInfo = {"name": "addproduct", "args": {"item": str}}
+    isValid = await isValidCall(ctx, commandInfo, [item], args)
+    if not isValid:
+        return
+
+    # If the item is not in the shop, return an error message
+    if item not in shop:
+        await send_embed(ctx, "Error", f"**{item}** is not in the shop.",
+                         redHex)
+        return
+
+    # If the item is out of stock, return an error message
+    if shop[item]["Stock"] <= 0:
+        await send_embed(ctx, "Error", f"**{item}** is currenly out of stock.",
+                         redHex)
+        return
+
+    # If the user doesn't have enough points, return an error message
+    userID = str(ctx.author.id)
+    if userID not in points:
+        pointsNeeded = shop[item]["Points"]
+    else:
+        pointsNeeded = shop[item]["Points"] - points[userID]
+    if pointsNeeded > 0:
+        await send_embed(ctx, "Error",
+                         f"You need {shop[item]['Points']} more points " +
+                         "to purchase this item.", redHex)
+        return
+
+    # If we get to this point, make the purchase and return a success message
+    if userID not in purchases:
+        purchases[userID] = {}
+    if item not in purchases[userID]:
+        purchases[userID][item] = 1
+    else:
+        purchases[userID][item] += 1
+
+    points[userID] -= shop[item]["Points"]
+    shop[item]["Stock"] -= 1
+
+    saveData("purchases", purchases)
+    saveData("points", points)
+    saveData("shop", shop)
+
+    await send_embed(ctx, "Success!",
+                     f"You have purchased one {item}. " +
+                     "Please open a ticket to claim it.", greenHex)
+
+
+# --------------------------------------------------------------------------- #
+# ------------------------------ Shop Command ------------------------------- #
+# --------------------------------------------------------------------------- #
+@bot.command(name='shop')
+# @commands.cooldown(1, 0.5, commands.BucketType.user)
+async def shop(ctx):
+
+    # If this isn't one of the channels where we take commands, stop here
+    if ctx.channel.id not in DISCORD_SHOP_CHANNELS:
+        return
+
+    # If the shop is empty, alert the user
+    if len(shop) == 0:
+        await send_embed(ctx, "__Shop Page 1__",
+                         "The shop is empty 😔",
+                         shopHex)
+        return
+
+    # Otherwise display the shop's first page, containing `itemsPerPage` items
+    fields = generatePageFields(page=1)
+    message = await send_embed(ctx, "", f"🎁 **{groupName} Shop Page 1** 🎁",
+                               shopHex, fields)
+
+    # Add reactions for page navigation
+    numPages = math.ceil(len(shop.keys()) / itemsPerPage)
+    for num in range(numPages):
+        await message.add_reaction(numberEmojis[num])
+
+
+# --------------------------------------------------------------------------- #
+# ------------------------------ Admin Commands ----------------------------- #
+# --------------------------------------------------------------------------- #
+# --------------------------------------------------------------------------- #
+# ---------------------------- Add a new product  --------------------------- #
+# --------------------------------------------------------------------------- #
 @bot.command(name='addproduct')
-@commands.cooldown(1, 0.5, commands.BucketType.user)
 async def addproduct(ctx, productName=None, cost=None, stock=None, *args):
 
     # If this isn't a valid call of this admin command, stop here
     commandInfo = {"name": "addproduct",
                    "args": {"productName": str, "cost": int, "stock": int}}
     isValid = await isValidCall(ctx, commandInfo,
-                                [productName, cost, stock], args)
+                                [productName, cost, stock], args,
+                                adminOnly=True)
     if not isValid:
         return
+
+    # Cast each argument to the proper type
+    cost = int(cost)
+    stock = int(stock)
 
     # If the product is already in the store, return an error
     if productName in shop:
@@ -451,18 +535,23 @@ async def addproduct(ctx, productName=None, cost=None, stock=None, *args):
                          f"a stock of **{stock}**", greenHex)
 
 
+# --------------------------------------------------------------------------- #
 # ------------------- Add stock to an existing product  --------------------- #
+# --------------------------------------------------------------------------- #
 @bot.command(name='addstock')
-@commands.cooldown(1, 0.5, commands.BucketType.user)
 async def addstock(ctx, productName=None, stock=None, *args):
 
     # If this isn't a valid call of this admin command, stop here
     commandInfo = {"name": "addstock",
                    "args": {"productName": str, "stock": int}}
     isValid = await isValidCall(ctx, commandInfo,
-                                [productName, stock], args)
+                                [productName, stock], args,
+                                adminOnly=True)
     if not isValid:
         return
+
+    # Cast each argument to the proper type
+    stock = int(stock)
 
     # If the product is not in the shop, return an error
     if productName not in shop:
@@ -472,8 +561,7 @@ async def addstock(ctx, productName=None, stock=None, *args):
         return
     # Otherwise add the product's stock to the shop.
     else:
-        shop[productName]["Stock"] = int(shop[productName]["Stock"]) + \
-                                     int(stock)
+        shop[productName]["Stock"] = int(shop[productName]["Stock"]) + stock
     saveData("shop", shop)
 
     # Return a success message
@@ -481,16 +569,18 @@ async def addstock(ctx, productName=None, stock=None, *args):
                      f"of **{shop[productName]['Stock']}**", greenHex)
 
 
+# --------------------------------------------------------------------------- #
 # ----------------------------- Delete a product  --------------------------- #
+# --------------------------------------------------------------------------- #
 @bot.command(name='delete')
-@commands.cooldown(1, 0.5, commands.BucketType.user)
 async def delete(ctx, productName=None, *args):
 
     # If this isn't a valid call of this admin command, stop here
     commandInfo = {"name": "delete",
                    "args": {"productName": str}}
     isValid = await isValidCall(ctx, commandInfo,
-                                [productName], args)
+                                [productName], args,
+                                adminOnly=True)
     if not isValid:
         return
 
@@ -508,8 +598,9 @@ async def delete(ctx, productName=None, *args):
                      f"**{productName}** has been removed from the shop.",
                      greenHex)
 
-
+# --------------------------------------------------------------------------- #
 # -------------------------- Give a user points  ---------------------------- #
+# --------------------------------------------------------------------------- #
 userMentionPattern = re.compile(r"<@!(\d+)>")
 @bot.command(name='givepoints')
 async def givepoints(ctx, user=None, amount=None, *args):
@@ -518,9 +609,13 @@ async def givepoints(ctx, user=None, amount=None, *args):
     commandInfo = {"name": "givepoints",
                    "args": {"user": str, "amount": int}}
     isValid = await isValidCall(ctx, commandInfo,
-                                [user, amount], args)
+                                [user, amount], args,
+                                adminOnly=True)
     if not isValid:
         return
+
+    # Cast each argument to the proper type
+    amount = int(amount)
 
     # If the regular expression above can't find the user, return an error
     userSearchResult = userMentionPattern.search(user)
@@ -538,9 +633,9 @@ async def givepoints(ctx, user=None, amount=None, *args):
     # and return a success message
     userIDStr = str(user.id)
     if userIDStr in points:
-        points[userIDStr] += int(amount)
+        points[userIDStr] += amount
     else:
-        points[userIDStr] = int(amount)
+        points[userIDStr] = amount
     await send_embed(ctx, "Success!",
                      f"{user.name} now has {points[userIDStr]} points.",
                      greenHex)
@@ -548,11 +643,14 @@ async def givepoints(ctx, user=None, amount=None, *args):
 
 
 # --------------------------------------------------------------------------- #
+# --------------------------------------------------------------------------- #
 # -------------------------------- Enter Here ------------------------------- #
+# --------------------------------------------------------------------------- #
 # --------------------------------------------------------------------------- #
 if __name__ == "__main__":
 
-    # Load the stored points and shop
+    # Load the saved data
+    purchases = loadData("purchases")
     points = loadData("points")
     shop = loadData("shop")
 
