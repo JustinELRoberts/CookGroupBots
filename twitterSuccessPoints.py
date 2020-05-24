@@ -436,7 +436,7 @@ async def points(ctx, user=None, *args):
         userPoints = 0
     else:
         userPoints = points[userID]
-    await send_embed(ctx, "Points", f"{user.name} has {userPoints} points.",
+    await send_embed(ctx, f"{user.name}\'s Points", f"{userPoints}",
                      greenHex)
 
 
@@ -477,17 +477,17 @@ async def purchase(ctx, item=None, *args):
         return
 
     # If we get to this point, make the purchase and return a success message
-    if userID not in purchases:
-        purchases[userID] = {}
-    if item not in purchases[userID]:
-        purchases[userID][item] = 1
+    if userID not in orders:
+        orders[userID] = {}
+    if item not in orders[userID]:
+        orders[userID][item] = 1
     else:
-        purchases[userID][item] += 1
+        orders[userID][item] += 1
 
     points[userID] -= shop[item]["Points"]
     shop[item]["Stock"] -= 1
 
-    saveData("purchases", purchases)
+    saveData("orders", orders)
     saveData("points", points)
     saveData("shop", shop)
 
@@ -601,11 +601,11 @@ async def addstock(ctx, productName=None, stock=None, *args):
 # --------------------------------------------------------------------------- #
 # ----------------------------- Delete a product  --------------------------- #
 # --------------------------------------------------------------------------- #
-@bot.command(name='delete')
-async def delete(ctx, productName=None, *args):
+@bot.command(name='deleteproduct')
+async def deleteproduct(ctx, productName=None, *args):
 
     # If this isn't a valid call of this admin command, stop here
-    commandInfo = {"name": "delete",
+    commandInfo = {"name": "deleteproduct",
                    "args": {"productName": str}}
     isValid = await isValidCall(ctx, commandInfo,
                                 [productName], args,
@@ -626,6 +626,54 @@ async def delete(ctx, productName=None, *args):
     await send_embed(ctx, "Success!",
                      f"**{productName}** has been removed from the shop.",
                      greenHex)
+
+
+# --------------------------------------------------------------------------- #
+# ---------------------------- Fulfill an order  ---------------------------- #
+# --------------------------------------------------------------------------- #
+@bot.command(name='fillorder')
+async def fillorder(ctx, user=None, order=None, *args):
+
+    # If this isn't a valid call of this admin command, stop here
+    commandInfo = {"name": "fillorder",
+                   "args": {"user": str, "order": str}}
+    isValid = await isValidCall(ctx, commandInfo,
+                                [user, order], args,
+                                adminOnly=True)
+    if not isValid:
+        return
+
+    # If the regular expression pattern can't find the user, return an error
+    userSearchResult = userMentionPattern.search(user)
+    if userSearchResult is None:
+        await send_embed(ctx, "Error", "User not found.", redHex)
+        return
+
+    # If we can't find the user given their ID, return an error
+    user = bot.get_user(int(userSearchResult.group(1)))
+    if user is None:
+        await send_embed(ctx, "Error", "User not found.", redHex)
+        return
+
+    # If the order does not exist, return an error
+    userIDStr = str(user.id)
+    if userIDStr not in orders or order not in orders[userIDStr]:
+        await send_embed(ctx, "Error",
+                         f'{user.name} does not have a pending ' +
+                         'order for "{order}".', redHex)
+        return
+
+    # Remove the order and return a success message
+    if orders[userIDStr][order] <= 1:
+        del orders[userIDStr][order]
+    else:
+        orders[userIDStr][order] -= 1
+    
+    saveData("oders", orders)
+    await send_embed(ctx, "Success!",
+                     f"{user.name}\'s order of {order} has been fulilled",
+                     greenHex)
+
 
 # --------------------------------------------------------------------------- #
 # -------------------------- Give a user points  ---------------------------- #
@@ -671,6 +719,49 @@ async def givepoints(ctx, user=None, amount=None, *args):
 
 
 # --------------------------------------------------------------------------- #
+# --------------------- Get a user's purchased orders  ---------------------- #
+# --------------------------------------------------------------------------- #
+@bot.command(name='orders')
+async def order(ctx, user=None, *args):
+
+    # If this isn't a valid call of this admin command, stop here
+    commandInfo = {"name": "orders",
+                   "args": {"user": str}}
+    isValid = await isValidCall(ctx, commandInfo,
+                                [user], args,
+                                adminOnly=True)
+    if not isValid:
+        return
+
+    # If the regular expression pattern can't find the user, return an error
+    userSearchResult = userMentionPattern.search(user)
+    if userSearchResult is None:
+        await send_embed(ctx, "Error", "User not found.", redHex)
+        return
+
+    # If we can't find the user given their ID, return an error
+    user = bot.get_user(int(userSearchResult.group(1)))
+    if user is None:
+        await send_embed(ctx, "Error", "User not found.", redHex)
+        return
+
+    # Return the user's orders
+    userIDStr = str(user.id)
+    if userIDStr not in orders or len(orders[userIDStr]) == 0:
+        await send_embed(ctx, f"{user.name}\'s Purchases",
+                         f"{user.name} does not have any active orders",
+                         greenHex)
+        return
+    else:
+        description = ""
+        for purchase in orders[userIDStr]:
+            description += '\n'
+            description += f"{purchase}: {orders[userIDStr][purchase]}"
+        await send_embed(ctx, f"{user.name}\'s Purchases", description,
+                         greenHex)
+
+
+# --------------------------------------------------------------------------- #
 # --------------------------------------------------------------------------- #
 # -------------------------------- Enter Here ------------------------------- #
 # --------------------------------------------------------------------------- #
@@ -678,8 +769,8 @@ async def givepoints(ctx, user=None, amount=None, *args):
 if __name__ == "__main__":
 
     # Load the saved data
-    purchases = loadData("purchases")
     points = loadData("points")
+    orders = loadData("orders")
     shop = loadData("shop")
 
     # Load twitter stuff
