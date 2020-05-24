@@ -25,12 +25,14 @@ redHex = 0xff0000
 shopHex = 0x00ff00
 
 # Initialize Bot object (inherits from Client)
-bot = commands.Bot(command_prefix='!')
+prefix = '!'
+bot = commands.Bot(command_prefix=prefix)
 bot.remove_command('help')
 
 # Regex matching patterns
 hyperlinkUrlPattern = re.compile(r"\((.+)\)")
 tweetIdPattern = re.compile(r"/status/(\d+)")
+userMentionPattern = re.compile(r"<@!(\d+)>")
 
 # Used for adding reactions for shop page navigation
 numberEmojis = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣',
@@ -342,7 +344,7 @@ async def on_raw_reaction_add(rawReactionActionEvent):
 async def isValidCall(ctx, commandInfo, args, extraArgs, adminOnly=False):
 
     # Usage string
-    usage = f"Usage: `!{commandInfo['name']}"
+    usage = f"Usage: `{prefix}{commandInfo['name']}"
     for command in commandInfo["args"]:
         usage += f" <{command}>"
     usage += "`"
@@ -406,10 +408,37 @@ async def isValidCall(ctx, commandInfo, args, extraArgs, adminOnly=False):
 async def points(ctx, user=None, *args):
 
     # If this isn't a valid call of this user command, stop here
-    commandInfo = {"name": "addproduct", "args": {}}
+    commandInfo = {"name": "points", "args": {}}
     isValid = await isValidCall(ctx, commandInfo, [], args)
     if not isValid:
         return
+
+    # If one is given, search for the mentioned user
+    # If the regular expression pattern can't find the user, return an error
+    if user is None:
+        userSearchResult = str(ctx.author.id)
+    else:
+        userSearchResult = userMentionPattern.search(user)
+        if userSearchResult is None:
+            await send_embed(ctx, "Error", "User not found.", redHex)
+            return
+        userSearchResult = userSearchResult.group(1)
+
+    # If we can't find the user given their ID, return an error
+    user = bot.get_user(int(userSearchResult))
+    if user is None:
+        await send_embed(ctx, "Error", "User not found.", redHex)
+        return
+
+    # Return the number of points the user has
+    userID = str(user.id)
+    if userID not in points:
+        userPoints = 0
+    else:
+        userPoints = points[userID]
+    await send_embed(ctx, "Points", f"{user.name} has {userPoints} points.",
+                     greenHex)
+
 
 # --------------------------------------------------------------------------- #
 # ---------------------------- Purchase Command ----------------------------- #
@@ -601,7 +630,6 @@ async def delete(ctx, productName=None, *args):
 # --------------------------------------------------------------------------- #
 # -------------------------- Give a user points  ---------------------------- #
 # --------------------------------------------------------------------------- #
-userMentionPattern = re.compile(r"<@!(\d+)>")
 @bot.command(name='givepoints')
 async def givepoints(ctx, user=None, amount=None, *args):
 
@@ -617,7 +645,7 @@ async def givepoints(ctx, user=None, amount=None, *args):
     # Cast each argument to the proper type
     amount = int(amount)
 
-    # If the regular expression above can't find the user, return an error
+    # If the regular expression pattern can't find the user, return an error
     userSearchResult = userMentionPattern.search(user)
     if userSearchResult is None:
         await send_embed(ctx, "Error", "User not found.", redHex)
@@ -625,7 +653,7 @@ async def givepoints(ctx, user=None, amount=None, *args):
 
     # If we can't find the user given their ID, return an error
     user = bot.get_user(int(userSearchResult.group(1)))
-    if userSearchResult is None:
+    if user is None:
         await send_embed(ctx, "Error", "User not found.", redHex)
         return
 
