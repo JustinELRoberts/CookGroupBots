@@ -401,6 +401,7 @@ async def isValidCall(ctx, commandInfo, args, extraArgs, adminOnly=False):
     # If we get to this point, the command is valid
     return True
 
+
 # --------------------------------------------------------------------------- #
 # ------------------------------ Points Command ----------------------------- #
 # --------------------------------------------------------------------------- #
@@ -531,11 +532,11 @@ async def shop(ctx):
 # --------------------------------------------------------------------------- #
 # ---------------------------- Add a new product  --------------------------- #
 # --------------------------------------------------------------------------- #
-@bot.command(name='addproduct')
-async def addproduct(ctx, productName=None, cost=None, stock=None, *args):
+@bot.command(name='additem')
+async def additem(ctx, productName=None, cost=None, stock=None, *args):
 
     # If this isn't a valid call of this admin command, stop here
-    commandInfo = {"name": "addproduct",
+    commandInfo = {"name": "additem",
                    "args": {"productName": str, "cost": int, "stock": int}}
     isValid = await isValidCall(ctx, commandInfo,
                                 [productName, cost, stock], args,
@@ -601,11 +602,11 @@ async def addstock(ctx, productName=None, stock=None, *args):
 # --------------------------------------------------------------------------- #
 # ----------------------------- Delete a product  --------------------------- #
 # --------------------------------------------------------------------------- #
-@bot.command(name='deleteproduct')
-async def deleteproduct(ctx, productName=None, *args):
+@bot.command(name='deleteitem')
+async def deleteitem(ctx, productName=None, *args):
 
     # If this isn't a valid call of this admin command, stop here
-    commandInfo = {"name": "deleteproduct",
+    commandInfo = {"name": "deleteitem",
                    "args": {"productName": str}}
     isValid = await isValidCall(ctx, commandInfo,
                                 [productName], args,
@@ -722,7 +723,7 @@ async def givepoints(ctx, user=None, amount=None, *args):
 # --------------------- Get a user's purchased orders  ---------------------- #
 # --------------------------------------------------------------------------- #
 @bot.command(name='orders')
-async def order(ctx, user=None, *args):
+async def orders(ctx, user=None, *args):
 
     # If this isn't a valid call of this admin command, stop here
     commandInfo = {"name": "orders",
@@ -758,6 +759,199 @@ async def order(ctx, user=None, *args):
             description += '\n'
             description += f"{purchase}: {orders[userIDStr][purchase]}"
         await send_embed(ctx, f"{user.name}\'s Purchases", description,
+                         greenHex)
+
+# --------------------------------------------------------------------------- #
+# --------------------------------------------------------------------------- #
+# ------------------------------- Help Command ------------------------------ #
+# --------------------------------------------------------------------------- #
+# --------------------------------------------------------------------------- #
+userCommands = {}
+userCommands["points"] = {
+    "args":
+    {
+        "user (optional)":
+            "Should be a mention (i.e. an `@`) of the user whose " +
+            "points you'd like to see.",
+    },
+    "description":
+        "Check how many points a user has. " +
+        "Leave `<user>` blank to get your own point count.",
+    "example":
+        "!points @Permittivity"
+}
+userCommands["purchase"] = {
+    "args":
+    {
+        "item":
+            "The item which you'd like to purchase."
+    },
+    "description":
+        "Used to purchase an item from the shop.",
+    "example":
+        '!purchase "Multi Word Product Name"'
+}
+userCommands["shop"] = {
+    "args": {},
+    "description":
+        "View the items available to purchase.",
+    "example":
+        "!shop"
+}
+
+adminCommands = {}
+adminCommands["additem"] = {
+    "args":
+    {
+        "productName":
+            "Name of the pdocut to add.",
+        "cost":
+            "Number of points this product costs.",
+        "stock":
+            "Stock of the product to add."
+        },
+    "description":
+        "Add a new product to the shop.",
+    "example":
+        '!additem "Multi Word Product Name" 1000 1'
+    }
+adminCommands["addstock"] = {
+    "args":
+    {
+        "productName":
+            "Name of the product whose stock you want to change.",
+        "stock":
+            "Amount of stock to add (can be negative to reduce stock)."
+    },
+    "description":
+        "Add stock to an existing item in the shop.",
+    "example":
+        '!addstock "Multi Word Product Name" 10'
+}
+adminCommands["deleteitem"] = {
+    "args":
+    {
+        "productName":
+            "Name of the product which you'd like to delete."
+    },
+    "description":
+        "Remove an item from the shop.",
+    "example":
+        '!deleteitem "Multi Word Product Name"'
+}
+adminCommands["fillorder"] = {
+    "args":
+    {
+        "user":
+            "Should be a mention (i.e. an `@`) of the user whose " +
+            "order you'd like to fulfill.",
+        "order":
+            "The name of the product which the user bought. " +
+            "You can use `!orders <user>` to check their active orders."
+    },
+    "description":
+        "Used to delete orders from a user's list of purchases.",
+    "example":
+        '!fillorder @Permittivity "Multi Word Product Name"'
+}
+adminCommands["givepoints"] = {
+    "args":
+    {
+        "user":
+            "Should be a mention (i.e. an `@`) of the user whom " +
+            "you'd like to give points.",
+        "amount":
+            "The amount of points you'd like to add. " +
+            "If you'd like to remove points, use a negative number."
+    },
+    "description":
+        "Add `<amount>` points to `<user>`'s current point count.",
+    "example":
+        "!givepoints @Permittivity 100"
+}
+adminCommands["orders"] = {
+    "args":
+    {
+        "user":
+            "Should be a mention (i.e. an `@`) of the user whose " +
+            "pending orders you'd like to see.",
+    },
+    "description":
+        "Returns a user's pending orders.",
+    "example":
+        "!orders @Permittivity"
+}
+
+
+# Function to generate the description for a single command
+def generateDescription(command, commandList, example=False):
+    description = f"**Description:** {commandList[command]['description']}"
+    description += '\n'
+    description += f"**Usage:** `!{command}"
+    for arg in commandList[command]["args"]:
+        description += f" <{arg}>"
+    description += '`'
+    if example:
+        description += '\n'
+        description += f"**Example:** `{commandList[command]['example']}`"
+    return description
+
+
+@bot.command(name='help')
+async def help(ctx, command=None, *args):
+
+    # First deal with a specific command
+    if command is not None:
+
+        # If the command does not exist, return an error message
+        doesNotExist = False
+        if command in adminCommands:
+            adminCommand = True
+        else:
+            adminCommand = False
+        if command not in userCommands:
+            doesNotExist = True
+            adminCommand = False
+            if ctx.author.id in DISCORD_ADMINS and command in adminCommands:
+                doesNotExist = False
+                adminCommand = True
+        if doesNotExist:
+            await send_embed(ctx, "Error", f"The command `!{command}` either" +
+                             " does not exist or you don't have permission " +
+                             "to use it.",
+                             redHex)
+            return
+
+        # Display the help message for this command
+        if adminCommand:
+            description = generateDescription(command, adminCommands,
+                                              example=True)
+        else:
+            description = generateDescription(command, userCommands,
+                                              example=True)
+        await send_embed(ctx, f"Help for !{command}", description, greenHex)
+
+    # Now deal with the general help menu
+    else:
+        # First get the commands available to this user
+        commands = list(userCommands.keys())
+        if ctx.author.id in DISCORD_ADMINS:
+            commands += list(adminCommands.keys())
+        commands.sort()
+
+        description = "To get more information about a particular, "
+        description += "command, try `!help <command>`\n\n"
+        for command in commands:
+            description += f"`!{command}`"
+            if command in adminCommands:
+                description += f" (Admin Only)\n"
+                description += generateDescription(command, adminCommands)
+            else:
+                description += '\n'
+                description += generateDescription(command, userCommands)
+            description += '\n\n'
+
+        await send_embed(ctx, "**Available Commands**", description,
                          greenHex)
 
 
