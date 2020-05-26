@@ -8,15 +8,14 @@ import os
 
 
 # Discord server settings
-DISCORD_BOT_ID = 650713254322241559
-DISCORD_SUCCESS_CHANNEL_ID = 712657003109023766
-DISCORD_SHOP_CHANNELS = [711960475340111943]
-DISCORD_ADMINS = [553221161450733569]
+# DISCORD_BOT_ID = 650713254322241559
+# DISCORD_SUCCESS_CHANNEL_ID = 712657003109023766
+# DISCORD_SHOP_CHANNELS = [711960475340111943]
+# DISCORD_ADMINS = [553221161450733569]
 
 # UI settings
 successPoints = 10
 itemsPerPage = 5
-groupName = "Justin Notify"
 
 # Colors used for embeds
 greenHex = 0x00ff00
@@ -142,11 +141,11 @@ def delete_tweet(tweet_url):
 def loadData(dataType):
 
     # Return an empty dict if we havent stored anything yet
-    if not os.path.exists(f"./{dataType}.json"):
+    if not os.path.exists(f"./{groupName}/{dataType}.json"):
         return {}
 
     # If we have, load it and return the result
-    with open(f"./{dataType}.json", 'r') as f:
+    with open(f"./{groupName}/{dataType}.json", 'r') as f:
         loadedData = json.load(f)
         f.close()
     return loadedData
@@ -154,7 +153,7 @@ def loadData(dataType):
 
 # Function to save the current point dict
 def saveData(dataType, data):
-    with open(f"./{dataType}.json", 'w+') as f:
+    with open(f"./{groupName}/{dataType}.json", 'w+') as f:
         json.dump(data, f)
         f.close
 
@@ -669,7 +668,7 @@ async def fillorder(ctx, user=None, order=None, *args):
         del orders[userIDStr][order]
     else:
         orders[userIDStr][order] -= 1
-    
+
     saveData("oders", orders)
     await send_embed(ctx, "Success!",
                      f"{user.name}\'s order of {order} has been fulilled",
@@ -961,6 +960,22 @@ async def help(ctx, command=None, *args):
 # --------------------------------------------------------------------------- #
 # --------------------------------------------------------------------------- #
 if __name__ == "__main__":
+
+    # Get the group name
+    groupName = input("What is the group name?\n")
+
+    # Load group settings
+    with open(f"./{groupName}/info.json", "r") as f:
+        info = json.load(f)
+        f.close()
+    DISCORD_BOT_ID = int(info["DISCORD_BOT_ID"])
+    DISCORD_SUCCESS_CHANNEL_ID = int(info["DISCORD_SUCCESS_CHANNEL_ID"])
+    DISCORD_SHOP_CHANNELS = []
+    for channelID in info["DISCORD_SHOP_CHANNELS"]:
+        DISCORD_SHOP_CHANNELS.append(int(channelID))
+    DISCORD_ADMINS = []
+    for adminID in info["DISCORD_ADMINS"]:
+        DISCORD_ADMINS.append(int(adminID))
 
     # Load the saved data
     points = loadData("points")
