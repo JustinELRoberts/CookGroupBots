@@ -54,15 +54,6 @@ async def send_embed(ctx, title, description, color, fields=None):
     return await ctx.send(embed=embed)
 
 
-# Get the linked jump url from the embed's added field
-def get_linked_jump_url(embed):
-    for field in embed.fields:
-        if field.name == "Your Post":
-            jumpURL = hyperlinkUrlPattern.search(field.value).group(1)
-            return jumpURL
-    return None
-
-
 # Generate and return the fields for a certain page for the shop
 def generatePageFields(page):
     fields = []
@@ -76,16 +67,6 @@ def generatePageFields(page):
                        "value": f"Cost: {points} points\nStock: {stock}",
                        "inline": False})
     return fields
-
-
-# Helper function to unpack a rawReactionActionEvent
-# Returns a dict containing useful information about the reaction
-async def unpackRawReactionActionEvent(reactionEvent):
-    authorID = reactionEvent.user_id
-    user = bot.get_user(authorID)
-    channel = bot.get_channel(reactionEvent.channel_id)
-    message = await channel.fetch_message(reactionEvent.message_id)
-    return (authorID, user, channel, message)
 
 
 # --------------------------------------------------------------------------- #
@@ -182,6 +163,15 @@ def getPoints(id):
 # --------------------------------------------------------------------------- #
 # ---------------------------- on_message Event ----------------------------- #
 # --------------------------------------------------------------------------- #
+# Get the linked jump url from the embed's added field
+def get_linked_jump_url(embed):
+    for field in embed.fields:
+        if field.name == "Your Post":
+            jumpURL = hyperlinkUrlPattern.search(field.value).group(1)
+            return jumpURL
+    return None
+
+
 # Function to respond to success posts
 async def respondToSuccess(message):
 
@@ -240,6 +230,16 @@ async def on_message(message):
 # --------------------------------------------------------------------------- #
 # -------------------------  on_reaction_add Event -------------------------- #
 # --------------------------------------------------------------------------- #
+# Helper function to unpack a rawReactionActionEvent
+# Returns a dict containing useful information about the reaction
+async def unpackRawReactionActionEvent(reactionEvent):
+    authorID = reactionEvent.user_id
+    user = bot.get_user(authorID)
+    channel = bot.get_channel(reactionEvent.channel_id)
+    message = await channel.fetch_message(reactionEvent.message_id)
+    return (authorID, user, channel, message)
+
+
 # Function used to add functionality for post deletion when reacting
 # to a post
 async def deleteSuccess(rawReactionActionEvent):
