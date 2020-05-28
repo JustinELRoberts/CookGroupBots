@@ -983,9 +983,9 @@ if __name__ == "__main__":
     shop = loadData("shop")
 
     # Load twitter stuff
-    twitterStuffString = open("./twitterStuff.txt").read()
+    twitterStuffString = open(f"./{groupName}/twitterStuff.txt").read()
     twitterStuff = json.loads(twitterStuffString)
 
     # Start the bot
-    discordToken = open("./discordToken.txt").read()
+    discordToken = open(f"./{groupName}/discordToken.txt").read()
     bot.run(discordToken)
