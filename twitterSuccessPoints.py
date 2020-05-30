@@ -242,11 +242,7 @@ async def unpackRawReactionActionEvent(reactionEvent):
 
 # Function used to add functionality for post deletion when reacting
 # to a post
-async def deleteSuccess(rawReactionActionEvent):
-
-    # Unpack the rawReactionActionEvent
-    e = rawReactionActionEvent
-    authorID, user, channel, message = await unpackRawReactionActionEvent(e)
+async def deleteSuccess(authorID, user, channel, message, event):
 
     # If this is not sent from the proper channel, stop here
     if channel.id != DISCORD_SUCCESS_CHANNEL_ID:
@@ -257,7 +253,7 @@ async def deleteSuccess(rawReactionActionEvent):
         return
 
     # If the reaction isnt ❌, stop here
-    if rawReactionActionEvent.emoji.name != '❌':
+    if event.emoji.name != '❌':
         return
 
     # If the reaction is not sent by the message author, delete it
@@ -284,13 +280,11 @@ async def deleteSuccess(rawReactionActionEvent):
 
 
 # Function to edit a shop post to change pages
-async def shopNavigation(rawReactionActionEvent):
+async def shopNavigation(authorID, user, channel, message, event):
 
-    # Unpack the rawReactionActionEvent
-    e = rawReactionActionEvent
-    authorID, user, channel, message = await unpackRawReactionActionEvent(e)
+    # Get additional info
     author = bot.get_user(authorID)
-    emoji = rawReactionActionEvent.emoji
+    emoji = event.emoji
 
     # If this is not sent from the proper channel, stop here
     if channel.id not in DISCORD_SHOP_CHANNELS:
@@ -329,9 +323,12 @@ async def shopNavigation(rawReactionActionEvent):
 
 @bot.event
 async def on_raw_reaction_add(rawReactionActionEvent):
-
-    await deleteSuccess(rawReactionActionEvent)
-    await shopNavigation(rawReactionActionEvent)
+    e = rawReactionActionEvent
+    authorID, user, channel, message = await unpackRawReactionActionEvent(e)
+    await deleteSuccess(authorID, user, channel, message,
+                        rawReactionActionEvent)
+    await shopNavigation(authorID, user, channel, message,
+                         rawReactionActionEvent)
 
 
 # --------------------------------------------------------------------------- #
