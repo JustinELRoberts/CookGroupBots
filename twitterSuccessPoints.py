@@ -265,6 +265,8 @@ async def deleteSuccess(authorID, user, channel, message, event):
     # If we get to this point, we need to delete all associated posts
     # First we need to get the post we made in response to the OP
     async for post in message.channel.history(after=message.created_at):
+        if len(post.embeds) == 0:
+            continue
         jump_url = get_linked_jump_url(post.embeds[0])
         # Once we find the message, delete the tweet, user post, and bot post
         if jump_url == message.jump_url:
