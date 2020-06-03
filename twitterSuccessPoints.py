@@ -331,7 +331,7 @@ async def on_raw_reaction_add(rawReactionActionEvent):
 # ------------------------------ User Commands ------------------------------ #
 # --------------------------------------------------------------------------- #
 # --------------------------------------------------------------------------- #
-# ---------- Helper function to validate the call of a user command ----------#
+# ------------ Helper function to validate the call of a command -------------#
 # --------------------------------------------------------------------------- #
 async def isValidCall(ctx, commandInfo, args, extraArgs, adminOnly=False):
 
