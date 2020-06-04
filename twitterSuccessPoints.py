@@ -116,11 +116,11 @@ def delete_tweet(tweet_url):
 def loadData(dataType):
 
     # Return an empty dict if we havent stored anything yet
-    if not os.path.exists(f"./{groupName}/{dataType}.json"):
+    if not os.path.exists(f"./{groupName}/shop/{dataType}.json"):
         return {}
 
     # If we have, load it and return the result
-    with open(f"./{groupName}/{dataType}.json", 'r') as f:
+    with open(f"./{groupName}/shop/{dataType}.json", 'r') as f:
         loadedData = json.load(f)
         f.close()
     return loadedData
@@ -128,7 +128,7 @@ def loadData(dataType):
 
 # Function to save the current point dict
 def saveData(dataType, data):
-    with open(f"./{groupName}/{dataType}.json", 'w+') as f:
+    with open(f"./{groupName}/shop/{dataType}.json", 'w+') as f:
         json.dump(data, f)
         f.close
 
