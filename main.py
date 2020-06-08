@@ -18,16 +18,29 @@ if __name__ == "__main__":
 
     # Get the group name
     groupName = input("What is the group name?\n")
-    bot.groupName = groupName
+    bot.info["groupName"] = groupName
 
     # If there is no `info.json` already, generate one
-    if not os.path.isfile(f"./groups/{groupName/info.json}"):
-        generateInfo(groupName)
+    path = f"./groups/{groupName}/info.json"
+    if not os.path.isfile(path):
+        generateInfo(path)
 
-    # Load the cogs
-    with open(f"./groups/{groupName}/info.json", "r") as f:
+    # Used to create the `!help` command
+    bot.helpInfo = {}
+
+    # Load the twitter stuff and save it to the `bot` object
+    bot.info = {}
+    twitterStuffString = open("./twitterStuff.txt").read()
+    bot.info["twitter"] = json.loads(twitterStuffString)
+
+    # Load the different roles in the `bot` object
+    with open(path, "r") as f:
         info = json.load(f)
         f.close()
+    bot.info["owners"] = info["owners"]
+    bot.info["admins"] = info["admins"]
+
+    # Load the cogs
     for cog in info["cogs"]:
         bot.load_extension(f"cogs.{cog}")
 

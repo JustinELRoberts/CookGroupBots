@@ -74,6 +74,8 @@ class VariantExtractor(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
+        bot.tempTest = "ahhhh"
+
         # Load group settings
         relPath = f"../groups/{self.bot.groupName}/info.json"
         myPath = os.path.abspath(os.path.dirname(__file__))
@@ -172,20 +174,3 @@ class VariantExtractor(commands.Cog):
 # --------------------------------------------------------------------------- #
 def setup(bot):
     bot.add_cog(VariantExtractor(bot))
-
-
-# if __name__ == "__main__":
-
-#     # Get the group name
-#     groupName = input("What is the group name?\n")
-
-#     # Load group settings
-#     with open(f"./{groupName}/info.json", "r") as f:
-#         info = json.load(f)
-#         f.close()
-#     DISCORD_BOT_ID = int(info["DISCORD_BOT_ID"])
-#     DISCORD_VARIANT_CHANNEL_ID = int(info["DISCORD_VARIANT_CHANNEL_ID"])
-
-#     # Start the bot
-#     discordToken = open(f"./{groupName}/discordToken.txt").read()
-#     bot.run(discordToken)
