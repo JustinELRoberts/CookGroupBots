@@ -74,10 +74,11 @@ class VariantExtractor(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-        bot.tempTest = "ahhhh"
+        # Add the information for this cog's `!help` command
+        self.addHelpInfo()
 
         # Load group settings
-        relPath = f"../groups/{self.bot.groupName}/info.json"
+        relPath = f"../groups/{self.bot.info['groupName']}/info.json"
         myPath = os.path.abspath(os.path.dirname(__file__))
         absPath = os.path.join(myPath, relPath)
         with open(absPath, "r") as f:
@@ -167,6 +168,29 @@ class VariantExtractor(commands.Cog):
                 description += f"{variant} - {variants['variants'][variant]}\n"
             await send_embed(ctx, f"__{variants['title']}__",
                              description, greenHex)
+    
+    # ----------------------------------------------------------------------- #
+    # ----------------------------------------------------------------------- #
+    # ------------------------------ Help Stuff ----------------------------- #
+    # ----------------------------------------------------------------------- #
+    # ----------------------------------------------------------------------- #
+    def addHelpInfo(self):
+        userCommands = {}
+        userCommands["variants"] = {
+            "args":
+            {
+                "url":
+                    "The url for an item on a Shopify store."
+            },
+            "description":
+                "Get the variants for an item on a Shopify store.",
+            "example":
+                "!variants https://kith.com/collections/mens-footwear/" + 
+                "products/adidas-yeezy-700-v1-analog"
+        }
+
+        self.bot.helpInfo["variantExtractor"] = {}
+        self.bot.helpInfo["variantExtractor"]["user"] = userCommands
 
 
 # --------------------------------------------------------------------------- #

@@ -34,7 +34,7 @@ mediaExt = ['.jpg', '.png', '.jpeg', '.mp4']
 # ------------------------ TwitterSuccessPoints Cog ------------------------- #
 # --------------------------------------------------------------------------- #
 # --------------------------------------------------------------------------- #
-class VariantExtractor(commands.Cog):
+class twitterSuccessPoints(commands.Cog):
 
     # ----------------------------------------------------------------------- #
     # ---------------------------- Initialization --------------------------- #
@@ -51,8 +51,8 @@ class VariantExtractor(commands.Cog):
         self.shop = self.loadData("shop")
 
         # Load group settings
-        self.groupName = self.bot.info['groupName']
-        relPath = f"../groups/{self.groupName}/info.json"
+        self.bot.info['groupName'] = self.bot.info['groupName']
+        relPath = f"../groups/{self.bot.info['groupName']}/info.json"
         myPath = os.path.abspath(os.path.dirname(__file__))
         absPath = os.path.join(myPath, relPath)
         with open(absPath, "r") as f:
@@ -147,18 +147,26 @@ class VariantExtractor(commands.Cog):
     def loadData(self, dataType):
 
         # Return an empty dict if we havent stored anything yet
-        if not os.path.exists(f"./{self.groupName}/shop/{dataType}.json"):
+        groupName = self.bot.info['groupName']
+        relPath = f"../groups/{groupName}/shop/{dataType}.json"
+        myPath = os.path.abspath(os.path.dirname(__file__))
+        absPath = os.path.join(myPath, relPath)
+        if not os.path.exists(absPath):
             return {}
 
         # If we have, load it and return the result
-        with open(f"./{self.groupName}/shop/{dataType}.json", 'r') as f:
+        with open(absPath, 'r') as f:
             loadedData = json.load(f)
             f.close()
         return loadedData
 
     # Function to save the current point dict
     def saveData(self, dataType, data):
-        with open(f"./{self.groupName}/shop/{dataType}.json", 'w+') as f:
+        groupName = self.bot.info['groupName']
+        relPath = f"../groups/{groupName}/shop/{dataType}.json"
+        myPath = os.path.abspath(os.path.dirname(__file__))
+        absPath = os.path.join(myPath, relPath)
+        with open(absPath, 'w+') as f:
             json.dump(data, f)
             f.close
 
@@ -249,7 +257,7 @@ class VariantExtractor(commands.Cog):
             await self.respondToSuccess(message)
 
         # Otherwise process commands
-        await self.bot.process_commands(message)
+        # await self.bot.process_commands(message)
 
     # ----------------------------------------------------------------------- #
     # -----------------------  on_reaction_add Event ------------------------ #
@@ -324,7 +332,8 @@ class VariantExtractor(commands.Cog):
         if len(message.embeds) != 1:
             return
         embed = message.embeds[0]
-        if f"**{self.groupName} Shop Page" not in embed.description:
+        groupName = self.bot.info['groupName']
+        if f"**{groupName} Shop Page" not in embed.description:
             return
 
         # If the reaction isnt a number emoji, remove it and stop here
@@ -335,7 +344,7 @@ class VariantExtractor(commands.Cog):
         # If we get to this point, we need change shop pages
         pageNum = numberEmojis.index(emoji.name) + 1
         fields = self.generatePageFields(page=pageNum)
-        desc = f"🎁 **{self.groupName} Shop Page 1** 🎁"
+        desc = f"🎁 **{self.bot.info['groupName']} Shop Page 1** 🎁"
         embed = discord.Embed(title="",
                               description=desc,
                               color=shopHex)
@@ -542,7 +551,7 @@ class VariantExtractor(commands.Cog):
         # Otherwise display the shop's first page,
         # containing `itemsPerPage` items
         fields = self.generatePageFields(page=1)
-        desc = f"🎁 **{self.groupName} Shop Page 1** 🎁",
+        desc = f"🎁 **{self.bot.info['groupName']} Shop Page 1** 🎁"
         message = await self.send_embed(ctx, "", desc, shopHex, fields)
 
         # Add reactions for page navigation
@@ -832,7 +841,7 @@ class VariantExtractor(commands.Cog):
             "args":
             {
                 "productName":
-                    "Name of the pdocut to add.",
+                    "Name of the product to add.",
                 "cost":
                     "Number of points this product costs.",
                 "stock":
@@ -909,6 +918,7 @@ class VariantExtractor(commands.Cog):
             "example":
                 "!orders @Permittivity"
         }
+        self.bot.helpInfo["twitterSuccessPoints"] = {}
         self.bot.helpInfo["twitterSuccessPoints"]["user"] = userCommands
         self.bot.helpInfo["twitterSuccessPoints"]["admin"] = adminCommands
 
@@ -917,4 +927,4 @@ class VariantExtractor(commands.Cog):
 # ----------------------------- Initialize Cog ------------------------------ #
 # --------------------------------------------------------------------------- #
 def setup(bot):
-    bot.add_cog(VariantExtractor(bot))
+    bot.add_cog(twitterSuccessPoints(bot))
