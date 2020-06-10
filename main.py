@@ -1,3 +1,4 @@
+from sharedFuncs import send_embed
 import discord
 from discord.ext import commands
 import json
@@ -18,15 +19,6 @@ shopHex = 0x00ff00
 # --------------------------------------------------------------------------- #
 # ------------------------------ Helper Funcs ------------------------------- #
 # --------------------------------------------------------------------------- #
-# Function to send a basic embed
-async def send_embed(ctx, title, description, color, fields=None):
-    embed = discord.Embed(title=title, description=description, color=color)
-    if fields is not None:
-        for field in fields:
-            embed.add_field(name=field["name"], value=field["value"])
-    await ctx.send(embed=embed)
-
-
 # Function to generate the `info.json` file
 def generateInfo(groupName):
     pass
@@ -34,7 +26,8 @@ def generateInfo(groupName):
 
 # Function to generate a single command's !help result
 def generateHelp(commandName, commandInfo):
-    result = f"**Usage:** `!{commandName}"
+    result = f"__**!{commandName}**__\n"
+    result += f"**Usage:** `!{commandName}"
     for arg in commandInfo['args']:
         result += f" <{arg}>"
     result += "`\n"
@@ -42,6 +35,17 @@ def generateHelp(commandName, commandInfo):
     result += f"**Example:** `{commandInfo['example']}`\n\n"
 
     return result
+
+
+# --------------------------------------------------------------------------- #
+# -------------------------------- Commands --------------------------------- #
+# --------------------------------------------------------------------------- #
+# --------------------------------------------------------------------------- #
+# ------------------------------- !adminadd --------------------------------- #
+# --------------------------------------------------------------------------- #
+@bot.command(name="adminadd")
+async def adminadd(ctx):
+    pass
 
 
 # --------------------------------------------------------------------------- #
@@ -86,7 +90,7 @@ async def help(ctx):
     if "admin" in helpInfo and ctx.author.id in bot.info["admins"]:
         for command in helpInfo["admin"]:
             description += generateHelp(command, helpInfo["admin"][command])
-        await send_embed(ctx, 
+        await send_embed(ctx,
                          f"__**{commandNames[currCog]} Admin Commands**__",
                          description, greenHex)
 

@@ -1,3 +1,4 @@
+from sharedFuncs import send_embed
 from discord.ext import commands
 import discord
 import twitter
@@ -71,15 +72,6 @@ class twitterSuccessPoints(commands.Cog):
     # ----------------------------------------------------------------------- #
     # --------------------------- Discord Funcs ----------------------------- #
     # ----------------------------------------------------------------------- #
-    # Function to send a basic embed
-    async def send_embed(self, ctx, title, desc, color, fields=None):
-        embed = discord.Embed(title=title, description=desc, color=color)
-        if fields is not None:
-            for field in fields:
-                embed.add_field(name=field["name"], value=field["value"],
-                                inline=field["inline"])
-        return await ctx.send(embed=embed)
-
     # Generate and return the fields for a certain page for the shop
     def generatePageFields(self, page):
         fields = []
@@ -233,17 +225,17 @@ class twitterSuccessPoints(commands.Cog):
 
         if isAttached:
             currPoints = self.getPoints(message.author.id)
-            await self.send_embed(message.channel, "Success!",
-                                  "Your success has been post to Twitter. " +
-                                  f"You have {currPoints} points.\n " +
-                                  "Please react with ❌ if you'd " +
-                                  "like to remove the post", greenHex, fields)
+            await send_embed(message.channel, "Success!",
+                             "Your success has been post to Twitter. " +
+                             f"You have {currPoints} points.\n " +
+                             "Please react with ❌ if you'd " +
+                             "like to remove the post", greenHex, fields)
             await message.add_reaction('❌')
         else:
-            await self.send_embed(message.channel, "Error",
-                                  "Please make sure you " +
-                                  "include an image or video in your post.",
-                                  redHex)
+            await send_embed(message.channel, "Error",
+                             "Please make sure you " +
+                             "include an image or video in your post.",
+                             redHex)
 
     @commands.Cog.listener()
     async def on_message(self, message):
@@ -307,11 +299,11 @@ class twitterSuccessPoints(commands.Cog):
                 await post.delete()
                 await message.delete()
                 self.addPoints(authorID, -successPoints)
-                await self.send_embed(message.channel, f"{message.author}",
-                                      "Your success has been deleted " +
-                                      "from Twitter.\nYou have " +
-                                      f"{self.getPoints(authorID)} points.\n",
-                                      redHex)
+                await send_embed(message.channel, f"{message.author}",
+                                 "Your success has been deleted " +
+                                 "from Twitter.\nYou have " +
+                                 f"{self.getPoints(authorID)} points.\n",
+                                 redHex)
 
     # Function to edit a shop post to change pages
     async def shopNavigation(self, authorID, user, channel, message, event):
@@ -390,24 +382,24 @@ class twitterSuccessPoints(commands.Cog):
 
         # If an admin did not send this message, return an error
         if adminOnly is True and ctx.author.id not in self.bot.info["admins"]:
-            await self.send_embed(ctx, "Error",
-                                  "You do not have permission " +
-                                  "to use this command",
-                                  redHex)
+            await send_embed(ctx, "Error",
+                             "You do not have permission " +
+                             "to use this command",
+                             redHex)
             return False
 
         # Make sure all args were passed
         if None in args:
             description = "You are missing one or more arguments.\n"
             description += usage
-            await self.send_embed(ctx.channel, "Error", description, redHex)
+            await send_embed(ctx.channel, "Error", description, redHex)
             return False
 
         # Make sure not too many args are passed
         if len(extraArgs) > 0:
             description = "You sent too many arguments.\n"
             description += usage
-            await self.send_embed(ctx.channel, "Error", description, redHex)
+            await send_embed(ctx.channel, "Error", description, redHex)
             return False
 
         # Check that every passed argument is the proper type
@@ -427,7 +419,7 @@ class twitterSuccessPoints(commands.Cog):
                 if num == numCommands - 2:
                     errorMsg += " and"
 
-            await self.send_embed(ctx.channel, "Error", errorMsg, redHex)
+            await send_embed(ctx.channel, "Error", errorMsg, redHex)
             return False
 
         # If we get to this point, the command is valid
@@ -453,14 +445,14 @@ class twitterSuccessPoints(commands.Cog):
         else:
             userSearchResult = userMentionPattern.search(user)
             if userSearchResult is None:
-                await self.send_embed(ctx, "Error", "User not found.", redHex)
+                await send_embed(ctx, "Error", "User not found.", redHex)
                 return
             userSearchResult = userSearchResult.group(1)
 
         # If we can't find the user given their ID, return an error
         user = self.bot.get_user(int(userSearchResult))
         if user is None:
-            await self.send_embed(ctx, "Error", "User not found.", redHex)
+            await send_embed(ctx, "Error", "User not found.", redHex)
             return
 
         # Return the number of points the user has
@@ -469,8 +461,8 @@ class twitterSuccessPoints(commands.Cog):
             userPoints = 0
         else:
             userPoints = self.points[userID]
-        await self.send_embed(ctx, f"{user.name}\'s Points", f"{userPoints}",
-                              greenHex)
+        await send_embed(ctx, f"{user.name}\'s Points", f"{userPoints}",
+                         greenHex)
 
     # ----------------------------------------------------------------------- #
     # -------------------------- Purchase Command --------------------------- #
@@ -486,16 +478,16 @@ class twitterSuccessPoints(commands.Cog):
 
         # If the item is not in the shop, return an error message
         if item not in self.shop:
-            await self.send_embed(ctx, "Error",
-                                  f"**{item}** is not in the shop.",
-                                  redHex)
+            await send_embed(ctx, "Error",
+                             f"**{item}** is not in the shop.",
+                             redHex)
             return
 
         # If the item is out of stock, return an error message
         if self.shop[item]["Stock"] <= 0:
-            await self.send_embed(ctx, "Error",
-                                  f"**{item}** is currenly out of stock.",
-                                  redHex)
+            await send_embed(ctx, "Error",
+                             f"**{item}** is currenly out of stock.",
+                             redHex)
             return
 
         # If the user doesn't have enough points, return an error message
@@ -506,9 +498,9 @@ class twitterSuccessPoints(commands.Cog):
             pointsNeeded = self.shop[item]["Points"] - self.points[userID]
         if pointsNeeded > 0:
             neededPoints = self.shop[item]['Points']
-            await self.send_embed(ctx, "Error",
-                                  f"You need {neededPoints} more points " +
-                                  "to purchase this item.", redHex)
+            await send_embed(ctx, "Error",
+                             f"You need {neededPoints} more points " +
+                             "to purchase this item.", redHex)
             return
 
         # If we get to this point, make the purchase and return a
@@ -527,9 +519,9 @@ class twitterSuccessPoints(commands.Cog):
         self.saveData("points", self.points)
         self.saveData("shop", self.shop)
 
-        await self.send_embed(ctx, "Success!",
-                              f"You have purchased one {item}. " +
-                              "Please open a ticket to claim it.", greenHex)
+        await send_embed(ctx, "Success!",
+                         f"You have purchased one {item}. " +
+                         "Please open a ticket to claim it.", greenHex)
 
     # ----------------------------------------------------------------------- #
     # ---------------------------- Shop Command ----------------------------- #
@@ -543,7 +535,7 @@ class twitterSuccessPoints(commands.Cog):
 
         # If the shop is empty, alert the user
         if len(self.shop) == 0:
-            await self.send_embed(ctx, "__Shop Page 1__",
+            await send_embed(ctx, "__Shop Page 1__",
                                   "The shop is empty 😔",
                                   shopHex)
             return
@@ -552,7 +544,7 @@ class twitterSuccessPoints(commands.Cog):
         # containing `itemsPerPage` items
         fields = self.generatePageFields(page=1)
         desc = f"🎁 **{self.bot.info['groupName']} Shop Page 1** 🎁"
-        message = await self.send_embed(ctx, "", desc, shopHex, fields)
+        message = await send_embed(ctx, "", desc, shopHex, fields)
 
         # Add reactions for page navigation
         numPages = math.ceil(len(self.shop.keys()) / itemsPerPage)
@@ -584,19 +576,19 @@ class twitterSuccessPoints(commands.Cog):
 
         # If the product is already in the store, return an error
         if productName in self.shop:
-            await self.send_embed(ctx, "Error",
-                                  f"**{productName}** is already in the shop",
-                                  redHex)
+            await send_embed(ctx, "Error",
+                             f"**{productName}** is already in the shop",
+                             redHex)
             return
 
         # Otherwise add it the shop and return a success message
         else:
             self.shop[productName] = {"Points": cost, "Stock": stock}
             self.saveData("shop", self.shop)
-            await self.send_embed(ctx, "Success!",
-                                  f"**{productName}** has been added to " +
-                                  f"the store with a price of **{cost}** " +
-                                  f"and a stock of **{stock}**", greenHex)
+            await send_embed(ctx, "Success!",
+                             f"**{productName}** has been added to " +
+                             f"the store with a price of **{cost}** " +
+                             f"and a stock of **{stock}**", greenHex)
 
     # ----------------------------------------------------------------------- #
     # ----------------- Add stock to an existing product  ------------------- #
@@ -618,9 +610,9 @@ class twitterSuccessPoints(commands.Cog):
 
         # If the product is not in the shop, return an error
         if productName not in self.shop:
-            await self.send_embed(ctx, "Error",
-                                  f"**{productName}** is not currently " +
-                                  "in the shop.", redHex)
+            await send_embed(ctx, "Error",
+                             f"**{productName}** is not currently " +
+                             "in the shop.", redHex)
             return
         # Otherwise add the product's stock to the shop.
         else:
@@ -629,10 +621,10 @@ class twitterSuccessPoints(commands.Cog):
         self.saveData("shop", self.shop)
 
         # Return a success message
-        await self.send_embed(ctx, "Success!",
-                              f"**{productName}** now has a stock " +
-                              f"of **{self.shop[productName]['Stock']}**",
-                              greenHex)
+        await send_embed(ctx, "Success!",
+                         f"**{productName}** now has a stock " +
+                         f"of **{self.shop[productName]['Stock']}**",
+                         greenHex)
 
     # ----------------------------------------------------------------------- #
     # --------------------------- Delete a product  ------------------------- #
@@ -651,17 +643,17 @@ class twitterSuccessPoints(commands.Cog):
 
         # If the product is not in the shop, return an error
         if productName not in self.shop:
-            await self.send_embed(ctx, "Error",
-                                  f"**{productName}** isn't currently " +
-                                  "in the shop.", redHex)
+            await send_embed(ctx, "Error",
+                             f"**{productName}** isn't currently " +
+                             "in the shop.", redHex)
             return
 
         # Otherwise delete it and return a success message
         del self.shop[productName]
         self.saveData("shop", self.shop)
-        await self.send_embed(ctx, "Success!",
-                              f"**{productName}** has been " +
-                              "removed from the shop.", greenHex)
+        await send_embed(ctx, "Success!",
+                         f"**{productName}** has been " +
+                         "removed from the shop.", greenHex)
 
     # ----------------------------------------------------------------------- #
     # -------------------------- Fulfill an order  -------------------------- #
@@ -682,21 +674,21 @@ class twitterSuccessPoints(commands.Cog):
         # return an error
         userSearchResult = userMentionPattern.search(user)
         if userSearchResult is None:
-            await self.send_embed(ctx, "Error", "User not found.", redHex)
+            await send_embed(ctx, "Error", "User not found.", redHex)
             return
 
         # If we can't find the user given their ID, return an error
         user = self.bot.get_user(int(userSearchResult.group(1)))
         if user is None:
-            await self.send_embed(ctx, "Error", "User not found.", redHex)
+            await send_embed(ctx, "Error", "User not found.", redHex)
             return
 
         # If the order does not exist, return an error
         userIDStr = str(user.id)
         if userIDStr not in self.orders or order not in self.orders[userIDStr]:
-            await self.send_embed(ctx, "Error",
-                                  f'{user.name} does not have a pending ' +
-                                  'order for "{order}".', redHex)
+            await send_embed(ctx, "Error",
+                             f'{user.name} does not have a pending ' +
+                             'order for "{order}".', redHex)
             return
 
         # Remove the order and return a success message
@@ -706,9 +698,9 @@ class twitterSuccessPoints(commands.Cog):
             self.orders[userIDStr][order] -= 1
 
         self.saveData("oders", self.orders)
-        await self.send_embed(ctx, "Success!",
-                              f"{user.name}\'s order of " +
-                              f"{order} has been fulilled", greenHex)
+        await send_embed(ctx, "Success!",
+                         f"{user.name}\'s order of " +
+                         f"{order} has been fulilled", greenHex)
 
     # ----------------------------------------------------------------------- #
     # ------------------------ Give a user points  -------------------------- #
@@ -732,13 +724,13 @@ class twitterSuccessPoints(commands.Cog):
         # return an error
         userSearchResult = userMentionPattern.search(user)
         if userSearchResult is None:
-            await self.send_embed(ctx, "Error", "User not found.", redHex)
+            await send_embed(ctx, "Error", "User not found.", redHex)
             return
 
         # If we can't find the user given their ID, return an error
         user = self.bot.get_user(int(userSearchResult.group(1)))
         if user is None:
-            await self.send_embed(ctx, "Error", "User not found.", redHex)
+            await send_embed(ctx, "Error", "User not found.", redHex)
             return
 
         # If we get to this point, add the points to the user
@@ -748,9 +740,9 @@ class twitterSuccessPoints(commands.Cog):
             self.points[userIDStr] += amount
         else:
             self.points[userIDStr] = amount
-        await self.send_embed(ctx, "Success!",
-                              f"{user.name} now has " +
-                              f"{self.points[userIDStr]} points.", greenHex)
+        await send_embed(ctx, "Success!",
+                         f"{user.name} now has " +
+                         f"{self.points[userIDStr]} points.", greenHex)
         self.saveData("points", self.points)
 
     # ----------------------------------------------------------------------- #
@@ -772,30 +764,29 @@ class twitterSuccessPoints(commands.Cog):
         # return an error
         userSearchResult = userMentionPattern.search(user)
         if userSearchResult is None:
-            await self.send_embed(ctx, "Error", "User not found.", redHex)
+            await send_embed(ctx, "Error", "User not found.", redHex)
             return
 
         # If we can't find the user given their ID, return an error
         user = self.bot.get_user(int(userSearchResult.group(1)))
         if user is None:
-            await self.send_embed(ctx, "Error", "User not found.", redHex)
+            await send_embed(ctx, "Error", "User not found.", redHex)
             return
 
         # Return the user's orders
         userIDStr = str(user.id)
         if userIDStr not in self.orders or len(self.orders[userIDStr]) == 0:
-            await self.send_embed(ctx, f"{user.name}\'s Purchases",
-                                  f"{user.name} does not have any " +
-                                  "active orders", greenHex)
+            await send_embed(ctx, f"{user.name}\'s Purchases",
+                             f"{user.name} does not have any " +
+                             "active orders", greenHex)
             return
         else:
             description = ""
             for order in self.orders[userIDStr]:
                 description += '\n'
                 description += f"{order}: {self.orders[userIDStr][order]}"
-            await self.send_embed(ctx, f"{user.name}\'s Purchases",
-                                  description,
-                                  greenHex)
+            await send_embed(ctx, f"{user.name}\'s Purchases",
+                             description, greenHex)
 
     # ----------------------------------------------------------------------- #
     # ----------------------------------------------------------------------- #
