@@ -19,9 +19,36 @@ shopHex = 0x00ff00
 # --------------------------------------------------------------------------- #
 # ------------------------------ Helper Funcs ------------------------------- #
 # --------------------------------------------------------------------------- #
+# Function which concatenates input into a list
+def getInput(msg):
+    result = []
+    userInput = input(msg)
+    while userInput.lower() != "done":
+        result.append(userInput)
+        userInput = input(msg)
+    return result
+
+
 # Function to generate the `info.json` file
 def generateInfo(groupName):
     pass
+
+
+# Function to load the `info.json` file
+def loadInfo(groupName):
+    path = f"./groups/{groupName}/info.json"
+    with open(path, 'r') as f:
+        info = json.load(f)
+        f.close()
+    return info
+
+
+# Function to save the `info.json` file
+def saveInfo(groupName, info):
+    path = f"./groups/{groupName}/info.json"
+    with open(path, 'r') as f:
+        f.write(json.dumps(info))
+        f.close()
 
 
 # Function to generate a single command's !help result
@@ -105,18 +132,19 @@ async def help(ctx):
 
 if __name__ == "__main__":
 
-    # Used to share information between cogs
-    bot.info = {}
-
     # Get the group name
     # groupName = input("What is the group name?\n")
     groupName = "justin notify"
+
+    # Used to share information between cogs
+    bot.info = loadInfo(groupName)
+    bot.info["admins"] += bot.info["owners"]
     bot.info["groupName"] = groupName
 
     # If there is no `info.json` already, generate one
-    path = f"./groups/{groupName}/info.json"
-    if not os.path.isfile(path):
-        generateInfo(path)
+    # path = f"./groups/{groupName}/info.json"
+    # if not os.path.isfile(path):
+    #     generateInfo(path)
 
     # Used to create the `!help` command
     bot.helpInfo = {}
@@ -126,16 +154,8 @@ if __name__ == "__main__":
     twitterStuffString = open(twitDir).read()
     bot.info["twitter"] = json.loads(twitterStuffString)
 
-    # Load the different roles in the `bot` object
-    with open(path, "r") as f:
-        info = json.load(f)
-        f.close()
-    bot.info["owners"] = info["owners"]
-    bot.info["admins"] = info["admins"]
-    bot.info["admins"] += bot.info["owners"]
-
     # Load the cogs
-    for cog in info["cogs"]:
+    for cog in bot.info["cogs"]:
         bot.load_extension(f"cogs.{cog}")
 
     # Start the bot
