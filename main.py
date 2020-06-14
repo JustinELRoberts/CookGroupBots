@@ -89,6 +89,7 @@ async def help(ctx):
     }
 
     # Get the available channels
+    path = f"./groups/{groupName}/info.json"
     with open(path, "r") as f:
         info = json.load(f)
         f.close()

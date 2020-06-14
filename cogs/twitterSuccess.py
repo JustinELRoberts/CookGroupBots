@@ -3,6 +3,9 @@ import twitter
 import json
 import re
 
+
+# TODO: Convert this to a cog
+
 # ID of the discord bot
 # (can be found by posting something with the bot and checking ctx.author.id)
 DISCORD_BOT_ID = 650713254322241559
