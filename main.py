@@ -3,6 +3,7 @@ import discord
 from discord.ext import commands
 import json
 import os
+import re
 
 # Initialize Bot object (inherits from Client)
 prefix = '!'
@@ -31,8 +32,18 @@ def loadInfo(groupName):
 # Function to save the `info.json` file
 def saveInfo(groupName, info):
     path = f"./groups/{groupName}/info.json"
-    with open(path, 'r') as f:
-        f.write(json.dumps(info))
+    with open(path, 'w') as f:
+
+        # Remove indentation for arrays
+        jsonData = json.dumps(info, indent=4)
+        jsonData = re.sub(r'\[.*?\]', lambda m: m.group()
+              .replace("\n", "")
+              .replace("    ", "")
+              .replace(",", ", "),
+              jsonData,
+              flags=re.DOTALL)
+
+        f.write(jsonData)
         f.close()
 
 
@@ -116,6 +127,48 @@ def generateInfo():
             "typeName": "integers"
         }
     })
+
+    # Get the cogs the user wishes to use
+    info["cogs"] = []
+    allCogs = ["twitterSuccessPoints", "variantExtractor"]
+    for cog in allCogs:
+        userInput = input(f"\nDo you want to include the {cog} (y/n)?\n")
+        while userInput not in ['y', 'n']:
+            print("Please try again. Type with 'y' for yes or 'n' for no.\n")
+            userInput = input(f"Do you want to include the {cog} (y/n)?")
+        if userInput == 'y':
+            info["cogs"].append(cog)
+
+    # Get the info needed for each cog
+    for cog in info["cogs"]:
+        info[cog] = {}
+        info[cog]["channels"] = getInput({
+            "firstPrompt": 'Please type the ID of the channel where users ' +
+                           f'can call commands for the {cog} ' +
+                           'followed by the <enter> key.\n',
+            "nextPrompt": "If you'd like this to be accessible in multiple " +
+                          "channels, type another here followed by the " +
+                          "<enter> key. Type 'done' when you are finished.\n",
+            "castInfo":
+            {
+                "varType": int,
+                "varName": "Channel IDs",
+                "typeName": "integers"
+            }
+        })
+
+        if cog == "twitterSuccessPoints":
+            info[cog]["successChannel"] = getInput({
+                "firstPrompt": "Please type the ID of the `success` channel " +
+                               "followed by the <enter> key.\n",
+                "nextPrompt": None,
+                "castInfo":
+                {
+                    "varType": int,
+                    "varName": "Channel IDs",
+                    "typeName": "integers"
+                }
+            })
 
     return info
 
@@ -202,34 +255,33 @@ async def help(ctx):
 
 if __name__ == "__main__":
 
-    print(generateInfo())
+    # Get the group name
+    # groupName = input("What is your group name?\n")
+    groupName = "test notify"
 
-    # # Get the group name
-    # # groupName = input("What is your group name?\n")
-    # groupName = "justin notify"
+    # If there is no `info.json` already, generate one
+    if not os.path.isdir(f"./groups/{groupName}"):
+        bot.info = generateInfo()
+        os.mkdir(f"./groups/{groupName}")
+        saveInfo(groupName, bot.info)
+    # Otherwise load the pre-exiting data for this group
+    else:
+        bot.info = loadInfo(groupName)
+        bot.info["admins"] += bot.info["owners"]
+        bot.info["groupName"] = groupName
 
-    # # If there is no `info.json` already, generate one
-    # path = f"./groups/{groupName}/info.json"
-    # if not os.path.isfile(path):
-    #     bot.info = generateInfo(path)
-    # # Otherwise load the pre-exiting data for this group
-    # else:
-    #     bot.info = loadInfo(groupName)
-    #     bot.info["admins"] += bot.info["owners"]
-    #     bot.info["groupName"] = groupName
+    # Used to create the `!help` command
+    bot.helpInfo = {}
 
-    # # Used to create the `!help` command
-    # bot.helpInfo = {}
+    # Load the twitter stuff and save it to the `bot` object
+    twitDir = f"./groups/{groupName}/twitterStuff.txt"
+    twitterStuffString = open(twitDir).read()
+    bot.info["twitter"] = json.loads(twitterStuffString)
 
-    # # Load the twitter stuff and save it to the `bot` object
-    # twitDir = f"./groups/{groupName}/twitterStuff.txt"
-    # twitterStuffString = open(twitDir).read()
-    # bot.info["twitter"] = json.loads(twitterStuffString)
+    # Load the cogs
+    for cog in bot.info["cogs"]:
+        bot.load_extension(f"cogs.{cog}")
 
-    # # Load the cogs
-    # for cog in bot.info["cogs"]:
-    #     bot.load_extension(f"cogs.{cog}")
-
-    # # Start the bot
-    # discordToken = open(f"./groups/{groupName}/discordToken.txt").read()
-    # bot.run(discordToken)
+    # Start the bot
+    discordToken = open(f"./groups/{groupName}/discordToken.txt").read()
+    bot.run(discordToken)

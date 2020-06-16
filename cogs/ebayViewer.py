@@ -4,6 +4,7 @@ import requests
 import json
 import re
 
+# TODO: Testing and make this a cog
 
 # Colors used for embeds
 greenHex = 0x00ff00
