@@ -19,21 +19,6 @@ shopHex = 0x00ff00
 # --------------------------------------------------------------------------- #
 # ------------------------------ Helper Funcs ------------------------------- #
 # --------------------------------------------------------------------------- #
-# Function which concatenates input into a list
-def getInput(msg):
-    result = []
-    userInput = input(msg)
-    while userInput.lower() != "done":
-        result.append(userInput)
-        userInput = input(msg)
-    return result
-
-
-# Function to generate the `info.json` file
-def generateInfo(groupName):
-    pass
-
-
 # Function to load the `info.json` file
 def loadInfo(groupName):
     path = f"./groups/{groupName}/info.json"
@@ -49,6 +34,90 @@ def saveInfo(groupName, info):
     with open(path, 'r') as f:
         f.write(json.dumps(info))
         f.close()
+
+
+# Function to safely cast a variable `var` to the type `varType`
+# Prints an error message using `varName` and `varType` if casting fails
+def safeCast(var, castInfo):
+
+    # Unpack the input
+    varType = castInfo['varType']
+    varName = castInfo['varName']
+    typeName = castInfo['typeName']
+
+    # Safely cast the value passed
+    try:
+        var = varType(var)
+        return var
+    except ValueError:
+        print(f"ERROR: {varName} should be {typeName}.")
+        return None
+
+
+# Helper function to accept input in a deterministic way
+def getInput(inputInfo):
+
+    # Only used if we require multiple values
+    info = []
+
+    # Get the value from the user
+    prompt = inputInfo["firstPrompt"]
+    userInput = input('\n' + prompt)
+
+    # Parse the input and take more if needed
+    while userInput.lower() != "done":
+        userInput = safeCast(userInput, inputInfo["castInfo"])
+
+        if userInput is not None:
+            if inputInfo["nextPrompt"] is None:
+                return userInput
+            else:
+                info.append(userInput)
+                prompt = inputInfo["nextPrompt"]
+
+        userInput = input('\n' + prompt)
+
+    return info
+
+
+# Function to generate the `info.json` file
+def generateInfo():
+
+    # The object to return
+    info = {}
+
+    # Get the owners' user IDs
+    info["owners"] = getInput({
+        "firstPrompt": 'Please type the user ID of one of the owners ' +
+                       'followed by the <enter> key.\n',
+        "nextPrompt": 'Please type the user ID of another owner ' +
+                      'followed by the <enter> key.\n' +
+                      'Type "done" when you are finished.\n',
+        "castInfo":
+        {
+            "varType": int,
+            "varName": "User IDs",
+            "typeName": "integers"
+        }
+    })
+
+    # Admins can be added using the bot
+    info["admins"] = []
+
+    # Get the bot's user ID
+    info["botID"] = getInput({
+        "firstPrompt": 'Please type the user ID of the Discord bot ' +
+                       'followed by the <enter> key.\n',
+        "nextPrompt": None,
+        "castInfo":
+        {
+            "varType": int,
+            "varName": "User IDs",
+            "typeName": "integers"
+        }
+    })
+
+    return info
 
 
 # Function to generate a single command's !help result
@@ -133,32 +202,34 @@ async def help(ctx):
 
 if __name__ == "__main__":
 
-    # Get the group name
-    # groupName = input("What is the group name?\n")
-    groupName = "justin notify"
+    print(generateInfo())
 
-    # Used to share information between cogs
-    bot.info = loadInfo(groupName)
-    bot.info["admins"] += bot.info["owners"]
-    bot.info["groupName"] = groupName
+    # # Get the group name
+    # # groupName = input("What is your group name?\n")
+    # groupName = "justin notify"
 
-    # If there is no `info.json` already, generate one
+    # # If there is no `info.json` already, generate one
     # path = f"./groups/{groupName}/info.json"
     # if not os.path.isfile(path):
-    #     generateInfo(path)
+    #     bot.info = generateInfo(path)
+    # # Otherwise load the pre-exiting data for this group
+    # else:
+    #     bot.info = loadInfo(groupName)
+    #     bot.info["admins"] += bot.info["owners"]
+    #     bot.info["groupName"] = groupName
 
-    # Used to create the `!help` command
-    bot.helpInfo = {}
+    # # Used to create the `!help` command
+    # bot.helpInfo = {}
 
-    # Load the twitter stuff and save it to the `bot` object
-    twitDir = f"./groups/{groupName}/twitterStuff.txt"
-    twitterStuffString = open(twitDir).read()
-    bot.info["twitter"] = json.loads(twitterStuffString)
+    # # Load the twitter stuff and save it to the `bot` object
+    # twitDir = f"./groups/{groupName}/twitterStuff.txt"
+    # twitterStuffString = open(twitDir).read()
+    # bot.info["twitter"] = json.loads(twitterStuffString)
 
-    # Load the cogs
-    for cog in bot.info["cogs"]:
-        bot.load_extension(f"cogs.{cog}")
+    # # Load the cogs
+    # for cog in bot.info["cogs"]:
+    #     bot.load_extension(f"cogs.{cog}")
 
-    # Start the bot
-    discordToken = open(f"./groups/{groupName}/discordToken.txt").read()
-    bot.run(discordToken)
+    # # Start the bot
+    # discordToken = open(f"./groups/{groupName}/discordToken.txt").read()
+    # bot.run(discordToken)
