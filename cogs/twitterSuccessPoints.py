@@ -52,7 +52,6 @@ class twitterSuccessPoints(commands.Cog):
         self.shop = self.loadData("shop")
 
         # Load group settings
-        self.bot.info['groupName'] = self.bot.info['groupName']
         relPath = f"../groups/{self.bot.info['groupName']}/info.json"
         myPath = os.path.abspath(os.path.dirname(__file__))
         absPath = os.path.join(myPath, relPath)

@@ -92,7 +92,7 @@ def getInput(inputInfo):
 
 
 # Function to generate the `info.json` file
-def generateInfo():
+def generateInfo(groupName):
 
     # The object to return
     info = {}
@@ -157,7 +157,10 @@ def generateInfo():
             }
         })
 
+        # Get stuff specific to the twitterSuccessPoints cog
         if cog == "twitterSuccessPoints":
+
+            # Success channel info
             info[cog]["successChannel"] = getInput({
                 "firstPrompt": "Please type the ID of the `success` channel " +
                                "followed by the <enter> key.\n",
@@ -169,6 +172,69 @@ def generateInfo():
                     "typeName": "integers"
                 }
             })
+
+            # Twitter bot info
+            twitterStuff = {}
+            twitterStuff['key'] = getInput({
+                "firstPrompt": "Please type the API key of your Twitter " +
+                               "developer account followed by the " +
+                               "<enter> key.\n",
+                "nextPrompt": None,
+                "castInfo":
+                {
+                    "varType": str,
+                    "varName": "The API key",
+                    "typeName": "a string"
+                }
+            })
+            twitterStuff['secret'] = getInput({
+                "firstPrompt": "Please type the API secret key of your " +
+                               "Twitter developer account followed by the " +
+                               "<enter> key.\n",
+                "nextPrompt": None,
+                "castInfo":
+                {
+                    "varType": str,
+                    "varName": "The API secret key",
+                    "typeName": "a string"
+                }
+            })
+            twitterStuff['token'] = getInput({
+                "firstPrompt": "Please type the access token of your " +
+                               "Twitter developer account followed by the " +
+                               "<enter> key.\n",
+                "nextPrompt": None,
+                "castInfo":
+                {
+                    "varType": str,
+                    "varName": "The access token",
+                    "typeName": "a string"
+                }
+            })
+            twitterStuff['tokenSecret'] = getInput({
+                "firstPrompt": "Please type the access token secret of your " +
+                               "Twitter developer account followed by the " +
+                               "<enter> key.\n",
+                "nextPrompt": None,
+                "castInfo":
+                {
+                    "varType": str,
+                    "varName": "The access token secret",
+                    "typeName": "a string"
+                }
+            })
+            with open(f"./groups/{groupName}/twitterStuff.txt", 'w+') as f:
+                # Remove indentation for arrays
+                jsonData = json.dumps(twitterStuff, indent=4)
+                jsonData = re.sub(r'\[.*?\]', lambda m: m.group()
+                                  .replace("\n", "")
+                                  .replace("    ", "")
+                                  .replace(",", ", "),
+                                  jsonData,
+                                  flags=re.DOTALL)
+
+                f.write(jsonData)
+                f.close()
 
     return info
 
@@ -265,30 +331,55 @@ async def help(ctx):
 if __name__ == "__main__":
 
     # Get the group name
-    # groupName = input("What is your group name?\n")
-    groupName = "test notify"
+    groupName = input("What is your group name?\n")
+
+    # Create the `groups` folder if not already
+    if not os.path.isdir(f"./groups"):
+        os.mkdir(f"./groups/")
 
     # If there is no `info.json` already, generate one
     if not os.path.isdir(f"./groups/{groupName}"):
-        bot.info = generateInfo()
+
+        # get the info for `info.json`
         os.mkdir(f"./groups/{groupName}")
+        bot.info = generateInfo(groupName)
+        bot.info["groupName"] = groupName
+
+        # Get the discord bot's token then save both the above and this
+        with open(f"./groups/{groupName}/discordToken.txt", 'w+') as f:
+            token = getInput({
+                "firstPrompt": "Please type the token of your Disord bot " +
+                               "followed by the <enter> key.\n",
+                "nextPrompt": None,
+                "castInfo":
+                {
+                    "varType": str,
+                    "varName": "The token",
+                    "typeName": "a string"
+                }
+            })
+            f.write(token)
+            f.close()
         saveInfo(groupName, bot.info)
+
     # Otherwise load the pre-exiting data for this group
     else:
         bot.info = loadInfo(groupName)
         bot.info["admins"] += bot.info["owners"]
         bot.info["groupName"] = groupName
 
+    # If needed, load the twitter stuff and save it to the `bot` object
+    if "twitterSuccessPoints" in bot.info['cogs']:
+        twitDir = f"./groups/{groupName}/twitterStuff.txt"
+        twitterStuffString = open(twitDir).read()
+        bot.info["twitter"] = json.loads(twitterStuffString)
+
     # Used to create the `!help` command
     bot.helpInfo = {}
 
-    # Load the twitter stuff and save it to the `bot` object
-    twitDir = f"./groups/{groupName}/twitterStuff.txt"
-    twitterStuffString = open(twitDir).read()
-    bot.info["twitter"] = json.loads(twitterStuffString)
-
     # Load the cogs
     for cog in bot.info["cogs"]:
+        print(cog)
         bot.load_extension(f"cogs.{cog}")
 
     # Start the bot
