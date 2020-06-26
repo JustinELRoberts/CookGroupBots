@@ -37,11 +37,11 @@ def saveInfo(groupName, info):
         # Remove indentation for arrays
         jsonData = json.dumps(info, indent=4)
         jsonData = re.sub(r'\[.*?\]', lambda m: m.group()
-              .replace("\n", "")
-              .replace("    ", "")
-              .replace(",", ", "),
-              jsonData,
-              flags=re.DOTALL)
+                          .replace("\n", "")
+                          .replace("    ", "")
+                          .replace(",", ", "),
+                          jsonData,
+                          flags=re.DOTALL)
 
         f.write(jsonData)
         f.close()
@@ -192,8 +192,17 @@ def generateHelp(commandName, commandInfo):
 # --------------------------------------------------------------------------- #
 # ------------------------------- !adminadd --------------------------------- #
 # --------------------------------------------------------------------------- #
+# TODO: Add commands for role management
 @bot.command(name="adminadd")
-async def adminadd(ctx):
+async def adminadd(ctx, adminID):
+    pass
+
+
+# --------------------------------------------------------------------------- #
+# ------------------------------- !admindel --------------------------------- #
+# --------------------------------------------------------------------------- #
+@bot.command(name="admindel")
+async def adminadd(ctx, adminID):
     pass
 
 
