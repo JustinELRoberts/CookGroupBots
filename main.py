@@ -362,12 +362,15 @@ if __name__ == "__main__":
             f.close()
         saveInfo(groupName, bot.info)
 
+        # If the `twitterSuccessPoints` is included, create the `shop` dir
+        os.mkdir(f"./groups/{groupName}/shop")
+
     # Otherwise load the pre-exiting data for this group
     else:
         bot.info = loadInfo(groupName)
-        bot.info["admins"] += bot.info["owners"]
         bot.info["groupName"] = groupName
-
+    bot.info["admins"] += bot.info["owners"]
+    
     # If needed, load the twitter stuff and save it to the `bot` object
     if "twitterSuccessPoints" in bot.info['cogs']:
         twitDir = f"./groups/{groupName}/twitterStuff.txt"
@@ -379,9 +382,9 @@ if __name__ == "__main__":
 
     # Load the cogs
     for cog in bot.info["cogs"]:
-        print(cog)
         bot.load_extension(f"cogs.{cog}")
 
     # Start the bot
     discordToken = open(f"./groups/{groupName}/discordToken.txt").read()
+    print('---------------------- BOT STARTING ----------------------')
     bot.run(discordToken)

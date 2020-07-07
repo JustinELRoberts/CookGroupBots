@@ -519,7 +519,7 @@ class twitterSuccessPoints(commands.Cog):
         self.saveData("shop", self.shop)
 
         await send_embed(ctx, "Success!",
-                         f"You have purchased one {item}. " +
+                         f"You have purchased one **{item}**. " +
                          "Please open a ticket to claim it.", greenHex)
 
     # ----------------------------------------------------------------------- #

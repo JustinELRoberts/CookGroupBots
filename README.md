@@ -4,7 +4,7 @@
 ___
 ### Getting Started:
 1. Visit https://discord.com/developers/applications to create a discord bot instance
-1. Ensure you have Python 3.6 (or newer) installed and clone this repository
+1. Ensure you have Python 3.6 (or newer) installed (with the `discord` module) and clone this repository
 1. Run the `main.py` script. It will prompt you for all the information needed
 
 **Note 1:** If you are using the `twitterSuccessPoster`, you must also visit https://developer.twitter.com/ to create a twitter developer account
