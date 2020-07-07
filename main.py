@@ -268,7 +268,7 @@ async def adminadd(ctx, adminID):
 # ------------------------------- !admindel --------------------------------- #
 # --------------------------------------------------------------------------- #
 @bot.command(name="admindel")
-async def adminadd(ctx, adminID):
+async def admindel(ctx, adminID):
     pass
 
 
